@@ -27,7 +27,13 @@ export default function TaskItem({
   const taskRef = useRef<HTMLDivElement>(null);
   
   // Set up draggable
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { 
+    setNodeRef, 
+    transform, 
+    isDragging,
+    attributes,
+    listeners
+  } = useDraggable({
     id: `task-${task.id}`,
     data: {
       type: 'task',
@@ -94,15 +100,16 @@ export default function TaskItem({
         updateTaskMutation.isPending && "opacity-70",
         isDragging && "opacity-50 bg-muted"
       )}
-      tabIndex={0}
       onKeyDown={handleKeyDown}
-      {...attributes}
-      {...listeners}
+      tabIndex={0}
     >
       {/* Handle for dragging */}
-      <div className="drag-handle opacity-0 group-hover:opacity-70 mr-1 cursor-grab">
+      <button 
+        className="drag-handle opacity-0 group-hover:opacity-70 mr-1 cursor-grab flex items-center p-1 hover:bg-muted rounded"
+        title="Drag to move"
+      >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
-      </div>
+      </button>
       
       <Checkbox 
         className="h-5 w-5 rounded border-gray-600 mr-3"
