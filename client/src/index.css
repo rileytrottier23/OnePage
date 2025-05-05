@@ -63,11 +63,15 @@
 }
 
 .task-item {
-  @apply py-1.5 px-2; /* Reduced padding for more compact layout */
+  @apply py-1.5 px-2 transition-all duration-200 relative; /* Reduced padding for more compact layout */
 }
 
 .task-item:hover {
   @apply bg-white/5;
+}
+
+.task-item:focus {
+  @apply outline-none ring-1 ring-primary/40;
 }
 
 .category-container {
@@ -84,15 +88,18 @@
 
 /* Subtask indentation */
 .task-indent-1 {
-  @apply ml-5 border-l-[3px] border-primary/20 pl-2 -translate-x-2;
+  @apply ml-6 border-l-2 border-primary/40 pl-2;
+  margin-left: 1.5rem !important;
 }
 
 .task-indent-2 {
-  @apply ml-8 border-l-[3px] border-secondary/20 pl-2 -translate-x-2;
+  @apply ml-10 border-l-2 border-secondary/40 pl-2;
+  margin-left: 3rem !important;
 }
 
 .task-indent-3 {
-  @apply ml-11 border-l-[3px] border-destructive/20 pl-2 -translate-x-2;
+  @apply ml-14 border-l-2 border-destructive/40 pl-2;
+  margin-left: 4.5rem !important;
 }
 
 /* Visual indicator for subtasks */
@@ -102,8 +109,8 @@
 
 /* Add help text for Tab functionality */
 .task-item:focus::before {
-  content: "Tab to indent";
-  @apply absolute right-3 bottom-full text-xs text-muted-foreground bg-background px-2 py-1 rounded animate-in fade-in duration-300 mb-1;
+  content: "Tab to indent, Shift+Tab to unindent";
+  @apply absolute right-3 bottom-full text-xs text-muted-foreground bg-background/90 px-2 py-1 rounded animate-in fade-in duration-300 mb-1 shadow-sm;
   z-index: 10;
 }
 

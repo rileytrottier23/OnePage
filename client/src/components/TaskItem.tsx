@@ -87,19 +87,29 @@ export default function TaskItem({
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Tab') {
+      // Prevent default Tab behavior (moving focus)
       e.preventDefault();
+      e.stopPropagation();
+      
+      // Debug output
+      console.log(`Tab pressed on task ${task.id}, current indent: ${task.indentLevel || 0}`);
       
       if (e.shiftKey) {
         // Shift+Tab: Decrease indentation
-        if (task.indentLevel && task.indentLevel > 0) {
+        if ((task.indentLevel || 0) > 0) {
+          console.log(`Decreasing indent for task ${task.id}`);
           indentTaskMutation.mutate(false);
         }
       } else {
-        // Tab: Increase indentation or create subtask if already fully indented
-        if (task.indentLevel < 3) { // Limit indentation to 3 levels
+        // Tab: Increase indentation
+        // Limit indentation to 3 levels
+        const currentIndent = task.indentLevel || 0;
+        if (currentIndent < 3) {
+          console.log(`Increasing indent for task ${task.id}`);
           indentTaskMutation.mutate(true);
         } else if (onCreateSubtask) {
           // If we've reached max indentation, create a subtask instead
+          console.log(`Max indent reached, creating subtask for ${task.id}`);
           onCreateSubtask(task.id);
         }
       }
@@ -119,7 +129,7 @@ export default function TaskItem({
       ref={setNodeRef}
       style={dragStyle}
       className={cn(
-        "task-item flex items-center rounded-md cursor-grab",
+        "task-item flex items-center rounded-md cursor-grab relative",
         indentClass,
         updateTaskMutation.isPending && "opacity-70",
         isDragging && "opacity-50 bg-muted"
