@@ -232,7 +232,7 @@ export default function AuthPage() {
       </div>
 
       {/* Hero Section */}
-      <div className="flex-1 bg-gradient-to-br from-primary to-primary-foreground p-12 flex flex-col justify-center items-center text-white hidden md:flex">
+      <div className="flex-1 bg-gradient-to-br from-primary via-primary/90 to-black/90 p-12 flex flex-col justify-center items-center text-white hidden md:flex">
         <div className="max-w-md space-y-6">
           <h1 className="text-4xl font-bold">Welcome to OnePage</h1>
           <p className="text-xl">
