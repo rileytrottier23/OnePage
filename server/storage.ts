@@ -27,14 +27,14 @@ export interface IStorage {
   getAllCategories(userId?: number): Promise<Category[]>;
   getCategory(id: number, userId?: number): Promise<Category | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
-  updateCategory(id: number, updates: Partial<Category>): Promise<Category | undefined>;
+  updateCategory(id: number, updates: Partial<Category>, userId?: number): Promise<Category | undefined>;
   
   // Task methods
   getAllTasks(userId?: number): Promise<Task[]>;
   getTask(id: number, userId?: number): Promise<Task | undefined>;
   createTask(task: InsertTask & { originalCategory?: string | null }): Promise<Task>;
   updateTask(id: number, updates: Partial<Task>, userId?: number): Promise<Task | undefined>;
-  deleteTask(id: number): Promise<boolean>;
+  deleteTask(id: number, userId?: number): Promise<boolean>;
   archiveCompletedTasks(userId?: number): Promise<void>;
   
   // Default categories
@@ -274,10 +274,16 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   
-  async deleteTask(id: number): Promise<boolean> {
-    const result = await db
-      .delete(tasks)
-      .where(eq(tasks.id, id));
+  async deleteTask(id: number, userId?: number): Promise<boolean> {
+    if (userId) {
+      await db
+        .delete(tasks)
+        .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
+    } else {
+      await db
+        .delete(tasks)
+        .where(eq(tasks.id, id));
+    }
     return true; // PostgreSQL doesn't return count, but operation succeeded if no error
   }
   

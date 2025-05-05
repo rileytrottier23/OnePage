@@ -28,9 +28,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Categories
-  app.get("/api/categories", ensureAuth, async (req, res) => {
+  app.get("/api/categories", ensureAuth, async (req: any, res: any) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const categories = await storage.getAllCategories(userId);
       res.json(categories);
     } catch (err) {
@@ -38,9 +38,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/categories", ensureAuth, async (req, res) => {
+  app.post("/api/categories", ensureAuth, async (req: any, res: any) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const data = insertCategorySchema.parse({
         ...req.body,
         userId
@@ -55,19 +55,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update a category
   app.patch("/api/categories/:id", ensureAuth, async (req: any, res: any) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const id = parseInt(req.params.id);
       const { name } = z.object({
         name: z.string().min(1)
       }).parse(req.body);
       
       // First check if this category belongs to the user
-      const category = await storage.getCategory(id);
-      if (!category || category.userId !== userId) {
+      const category = await storage.getCategory(id, userId);
+      if (!category) {
         return res.status(404).json({ message: "Category not found" });
       }
       
-      const updated = await storage.updateCategory(id, { name });
+      const updated = await storage.updateCategory(id, { name }, userId);
       if (!updated) {
         return res.status(404).json({ message: "Category not found" });
       }
@@ -81,7 +81,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tasks
   app.get("/api/tasks", ensureAuth, async (req: any, res: any) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const tasks = await storage.getAllTasks(userId);
       // Filter out archived tasks
       const activeTasks = tasks.filter(task => !task.archived);
@@ -93,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/tasks/archived", ensureAuth, async (req: any, res: any) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const tasks = await storage.getAllTasks(userId);
       // Return only archived tasks
       const archivedTasks = tasks.filter(task => task.archived);
@@ -105,7 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/tasks", ensureAuth, async (req: any, res: any) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const taskData = insertTaskSchema.parse({
         ...req.body,
         userId
@@ -145,7 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/tasks/:id", ensureAuth, async (req: any, res: any) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const id = parseInt(req.params.id);
       const taskSchema = z.object({
         text: z.string().optional(),
@@ -184,7 +184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Route to update task indentation
   app.patch("/api/tasks/:id/indent", ensureAuth, async (req: any, res: any) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const id = parseInt(req.params.id);
       
       const { increase } = z.object({
@@ -217,7 +217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/tasks/:id/move", ensureAuth, async (req: any, res: any) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const id = parseInt(req.params.id);
       const { moveToToday } = z.object({
         moveToToday: z.boolean(),
@@ -263,7 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Archive tasks endpoint
   app.post("/api/tasks/archive", ensureAuth, async (req: any, res: any) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       // This will archive all completed tasks for this user
       await storage.archiveCompletedTasks(userId);
       res.json({ message: "Completed tasks archived successfully" });
@@ -275,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create subtask endpoint
   app.post("/api/tasks/:id/subtask", ensureAuth, async (req: any, res: any) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const parentId = parseInt(req.params.id);
       const parentTask = await storage.getTask(parentId, userId);
       
@@ -307,7 +307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Move task to another category endpoint
   app.patch("/api/tasks/:id/category", ensureAuth, async (req: any, res: any) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const id = parseInt(req.params.id);
       const { categoryId } = z.object({
         categoryId: z.number()
