@@ -144,6 +144,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Route to update task indentation
+  app.patch("/api/tasks/:id/indent", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      const { increase } = z.object({
+        increase: z.boolean(),
+      }).parse(req.body);
+      
+      const task = await storage.getTask(id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      // Calculate new indent level
+      let newIndentLevel = task.indentLevel || 0;
+      if (increase) {
+        newIndentLevel += 1;
+      } else {
+        // Don't go below 0
+        newIndentLevel = Math.max(0, newIndentLevel - 1);
+      }
+      
+      const updated = await storage.updateTask(id, {
+        indentLevel: newIndentLevel,
+      });
+      
+      res.json(updated);
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
   app.patch("/api/tasks/:id/move", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

@@ -74,11 +74,35 @@ export default function TaskItem({
     moveTaskMutation.mutate(!inTodaySection);
   };
 
+  const indentTaskMutation = useMutation({
+    mutationFn: (increase: boolean) => {
+      return apiRequest("PATCH", `/api/tasks/${task.id}/indent`, { increase })
+        .then(res => res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+    }
+  });
+
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    // Create subtask when Tab is pressed
-    if (e.key === 'Tab' && !e.shiftKey && onCreateSubtask) {
+    if (e.key === 'Tab') {
       e.preventDefault();
-      onCreateSubtask(task.id);
+      
+      if (e.shiftKey) {
+        // Shift+Tab: Decrease indentation
+        if (task.indentLevel && task.indentLevel > 0) {
+          indentTaskMutation.mutate(false);
+        }
+      } else {
+        // Tab: Increase indentation or create subtask if already fully indented
+        if (task.indentLevel < 3) { // Limit indentation to 3 levels
+          indentTaskMutation.mutate(true);
+        } else if (onCreateSubtask) {
+          // If we've reached max indentation, create a subtask instead
+          onCreateSubtask(task.id);
+        }
+      }
     }
   };
 

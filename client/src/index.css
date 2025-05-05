@@ -84,20 +84,27 @@
 
 /* Subtask indentation */
 .task-indent-1 {
-  @apply ml-6;
+  @apply ml-5 border-l-[3px] border-primary/20 pl-2 -translate-x-2;
 }
 
 .task-indent-2 {
-  @apply ml-12;
+  @apply ml-8 border-l-[3px] border-secondary/20 pl-2 -translate-x-2;
 }
 
 .task-indent-3 {
-  @apply ml-16;
+  @apply ml-11 border-l-[3px] border-destructive/20 pl-2 -translate-x-2;
 }
 
 /* Visual indicator for subtasks */
 .subtask-indicator {
-  @apply inline-block w-2 h-1 bg-muted-foreground/50 rounded-full mr-1;
+  @apply inline-block w-3 h-[2px] bg-muted-foreground/40 rounded-full mr-2;
+}
+
+/* Add help text for Tab functionality */
+.task-item:focus::before {
+  content: "Tab to indent";
+  @apply absolute right-3 bottom-full text-xs text-muted-foreground bg-background px-2 py-1 rounded animate-in fade-in duration-300 mb-1;
+  z-index: 10;
 }
 
 /* Space between tasks is reduced */
