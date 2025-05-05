@@ -215,14 +215,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/tasks/:id/move", async (req, res) => {
+  app.patch("/api/tasks/:id/move", ensureAuth, async (req: any, res: any) => {
     try {
+      const userId = req.user.id;
       const id = parseInt(req.params.id);
       const { moveToToday } = z.object({
         moveToToday: z.boolean(),
       }).parse(req.body);
       
-      const task = await storage.getTask(id);
+      const task = await storage.getTask(id, userId);
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }
@@ -242,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const updated = await storage.updateTask(id, {
           inTodaySection: true,
           originalCategory,
-        });
+        }, userId);
         
         res.json(updated);
       } else {
@@ -250,7 +251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const updated = await storage.updateTask(id, {
           inTodaySection: false,
           originalCategory: null,
-        });
+        }, userId);
         
         res.json(updated);
       }
@@ -260,10 +261,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Archive tasks endpoint
-  app.post("/api/tasks/archive", async (req, res) => {
+  app.post("/api/tasks/archive", ensureAuth, async (req: any, res: any) => {
     try {
-      // This will archive all completed tasks
-      await storage.archiveCompletedTasks();
+      const userId = req.user.id;
+      // This will archive all completed tasks for this user
+      await storage.archiveCompletedTasks(userId);
       res.json({ message: "Completed tasks archived successfully" });
     } catch (err) {
       handleError(err, res);
@@ -271,10 +273,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create subtask endpoint
-  app.post("/api/tasks/:id/subtask", async (req, res) => {
+  app.post("/api/tasks/:id/subtask", ensureAuth, async (req: any, res: any) => {
     try {
+      const userId = req.user.id;
       const parentId = parseInt(req.params.id);
-      const parentTask = await storage.getTask(parentId);
+      const parentTask = await storage.getTask(parentId, userId);
       
       if (!parentTask) {
         return res.status(404).json({ message: "Parent task not found" });
@@ -291,7 +294,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryId: parentTask.categoryId,
         inTodaySection: parentTask.inTodaySection,
         parentTaskId: parentId,
-        indentLevel
+        indentLevel,
+        userId
       });
       
       res.status(201).json(subtask);
@@ -301,14 +305,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Move task to another category endpoint
-  app.patch("/api/tasks/:id/category", async (req, res) => {
+  app.patch("/api/tasks/:id/category", ensureAuth, async (req: any, res: any) => {
     try {
+      const userId = req.user.id;
       const id = parseInt(req.params.id);
       const { categoryId } = z.object({
         categoryId: z.number()
       }).parse(req.body);
       
-      const task = await storage.getTask(id);
+      const task = await storage.getTask(id, userId);
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }
@@ -323,7 +328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryId,
         inTodaySection: false, // If moved to a category, it's no longer in Today
         originalCategory: null // Reset original category
-      });
+      }, userId);
       
       res.json(updated);
     } catch (err) {

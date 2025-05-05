@@ -24,18 +24,21 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   
   // Category methods
-  getAllCategories(): Promise<Category[]>;
-  getCategory(id: number): Promise<Category | undefined>;
+  getAllCategories(userId?: number): Promise<Category[]>;
+  getCategory(id: number, userId?: number): Promise<Category | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
   updateCategory(id: number, updates: Partial<Category>): Promise<Category | undefined>;
   
   // Task methods
-  getAllTasks(): Promise<Task[]>;
-  getTask(id: number): Promise<Task | undefined>;
+  getAllTasks(userId?: number): Promise<Task[]>;
+  getTask(id: number, userId?: number): Promise<Task | undefined>;
   createTask(task: InsertTask & { originalCategory?: string | null }): Promise<Task>;
-  updateTask(id: number, updates: Partial<Task>): Promise<Task | undefined>;
+  updateTask(id: number, updates: Partial<Task>, userId?: number): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
-  archiveCompletedTasks(): Promise<void>;
+  archiveCompletedTasks(userId?: number): Promise<void>;
+  
+  // Default categories
+  initializeDefaultCategories(userId?: number): Promise<void>;
   
   // Session store for authentication
   sessionStore: session.Store;
@@ -52,16 +55,32 @@ export class DatabaseStorage implements IStorage {
       pool, 
       createTableIfMissing: true 
     });
-    
-    // Initialize with default categories if there are none
-    this.initializeDefaultCategories();
   }
 
-  private async initializeDefaultCategories() {
+  async initializeDefaultCategories(userId?: number) {
+    if (!userId) return;
+    
     try {
-      await db.select().from(categories);
+      // Check if user already has categories
+      const userCategories = await db
+        .select()
+        .from(categories)
+        .where(eq(categories.userId, userId));
+      
+      if (userCategories.length === 0) {
+        // Create default categories for this user
+        const defaultCategories = [
+          { name: "Work", userId },
+          { name: "Personal", userId },
+          { name: "Shopping", userId }
+        ];
+        
+        for (const cat of defaultCategories) {
+          await this.createCategory(cat);
+        }
+      }
     } catch (error) {
-      console.log("Migration needed, will be handled by Drizzle Push");
+      console.error("Error creating default categories:", error);
     }
   }
 
@@ -109,7 +128,15 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(categories);
   }
   
-  async getCategory(id: number): Promise<Category | undefined> {
+  async getCategory(id: number, userId?: number): Promise<Category | undefined> {
+    if (userId) {
+      const [category] = await db
+        .select()
+        .from(categories)
+        .where(and(eq(categories.id, id), eq(categories.userId, userId)));
+      return category;
+    }
+    
     const [category] = await db
       .select()
       .from(categories)
@@ -125,26 +152,55 @@ export class DatabaseStorage implements IStorage {
     return category;
   }
   
-  async updateCategory(id: number, updates: Partial<Category>): Promise<Category | undefined> {
-    const [category] = await db
-      .select()
-      .from(categories)
-      .where(eq(categories.id, id));
+  async updateCategory(id: number, updates: Partial<Category>, userId?: number): Promise<Category | undefined> {
+    let category;
+    
+    if (userId) {
+      [category] = await db
+        .select()
+        .from(categories)
+        .where(and(eq(categories.id, id), eq(categories.userId, userId)));
+    } else {
+      [category] = await db
+        .select()
+        .from(categories)
+        .where(eq(categories.id, id));
+    }
     
     if (!category) return undefined;
     
-    const [updatedCategory] = await db
-      .update(categories)
-      .set(updates)
-      .where(eq(categories.id, id))
-      .returning();
+    let updatedCategory;
+    
+    if (userId) {
+      [updatedCategory] = await db
+        .update(categories)
+        .set(updates)
+        .where(and(eq(categories.id, id), eq(categories.userId, userId)))
+        .returning();
+    } else {
+      [updatedCategory] = await db
+        .update(categories)
+        .set(updates)
+        .where(eq(categories.id, id))
+        .returning();
+    }
     
     // If the category name was updated, also update originalCategory in all tasks
     if (updates.name && updates.name !== category.name) {
-      await db
-        .update(tasks)
-        .set({ originalCategory: updates.name })
-        .where(eq(tasks.originalCategory, category.name));
+      if (userId) {
+        await db
+          .update(tasks)
+          .set({ originalCategory: updates.name })
+          .where(and(
+            eq(tasks.originalCategory, category.name),
+            eq(tasks.userId, userId)
+          ));
+      } else {
+        await db
+          .update(tasks)
+          .set({ originalCategory: updates.name })
+          .where(eq(tasks.originalCategory, category.name));
+      }
     }
     
     return updatedCategory;
