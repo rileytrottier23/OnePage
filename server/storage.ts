@@ -58,12 +58,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   private async initializeDefaultCategories() {
-    const existingCategories = await db.select().from(categories);
-    if (existingCategories.length === 0) {
-      const defaultCategories = ["Work", "Personal", "Errands"];
-      for (const name of defaultCategories) {
-        await this.createCategory({ name });
-      }
+    try {
+      await db.select().from(categories);
+    } catch (error) {
+      console.log("Migration needed, will be handled by Drizzle Push");
     }
   }
 
@@ -101,7 +99,13 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Category methods
-  async getAllCategories(): Promise<Category[]> {
+  async getAllCategories(userId?: number): Promise<Category[]> {
+    if (userId) {
+      return await db
+        .select()
+        .from(categories)
+        .where(eq(categories.userId, userId));
+    }
     return await db.select().from(categories);
   }
   
@@ -147,11 +151,24 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Task methods
-  async getAllTasks(): Promise<Task[]> {
+  async getAllTasks(userId?: number): Promise<Task[]> {
+    if (userId) {
+      return await db
+        .select()
+        .from(tasks)
+        .where(eq(tasks.userId, userId));
+    }
     return await db.select().from(tasks);
   }
   
-  async getTask(id: number): Promise<Task | undefined> {
+  async getTask(id: number, userId?: number): Promise<Task | undefined> {
+    if (userId) {
+      const [task] = await db
+        .select()
+        .from(tasks)
+        .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
+      return task;
+    }
     const [task] = await db
       .select()
       .from(tasks)
@@ -173,6 +190,7 @@ export class DatabaseStorage implements IStorage {
       originalCategory: insertTask.originalCategory || null,
       parentTaskId: insertTask.parentTaskId || null,
       indentLevel: insertTask.indentLevel || 0,
+      userId: insertTask.userId || null,
     };
     
     const [task] = await db
@@ -182,7 +200,16 @@ export class DatabaseStorage implements IStorage {
     return task;
   }
   
-  async updateTask(id: number, updates: Partial<Task>): Promise<Task | undefined> {
+  async updateTask(id: number, updates: Partial<Task>, userId?: number): Promise<Task | undefined> {
+    if (userId) {
+      const [updated] = await db
+        .update(tasks)
+        .set(updates)
+        .where(and(eq(tasks.id, id), eq(tasks.userId, userId)))
+        .returning();
+      return updated;
+    }
+    
     const [updated] = await db
       .update(tasks)
       .set(updates)
@@ -198,16 +225,20 @@ export class DatabaseStorage implements IStorage {
     return true; // PostgreSQL doesn't return count, but operation succeeded if no error
   }
   
-  async archiveCompletedTasks(): Promise<void> {
+  async archiveCompletedTasks(userId?: number): Promise<void> {
+    const conditions = [
+      eq(tasks.completed, true),
+      eq(tasks.archived, false)
+    ];
+    
+    if (userId) {
+      conditions.push(eq(tasks.userId, userId));
+    }
+    
     await db
       .update(tasks)
       .set({ archived: true })
-      .where(
-        and(
-          eq(tasks.completed, true),
-          eq(tasks.archived, false)
-        )
-      );
+      .where(and(...conditions));
   }
 }
 

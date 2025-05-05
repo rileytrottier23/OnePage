@@ -5,11 +5,13 @@ import { z } from "zod";
 // Category Schema
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
+  name: text("name").notNull(),
+  userId: integer("user_id").references(() => users.id),
 });
 
 export const insertCategorySchema = createInsertSchema(categories).pick({
   name: true,
+  userId: true,
 });
 
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
@@ -28,6 +30,7 @@ export const tasks = pgTable("tasks", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   parentTaskId: integer("parent_task_id"),
   indentLevel: integer("indent_level").notNull().default(0),
+  userId: integer("user_id").references(() => users.id),
 });
 
 export const insertTaskSchema = createInsertSchema(tasks).pick({
@@ -36,6 +39,7 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   inTodaySection: true,
   parentTaskId: true,
   indentLevel: true,
+  userId: true,
 });
 
 export type InsertTask = z.infer<typeof insertTaskSchema>;

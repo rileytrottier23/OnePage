@@ -19,19 +19,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return res.status(500).json({ message: err.message || "Internal server error" });
   };
 
+  // Middleware to ensure user is authenticated
+  const ensureAuth = (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    next();
+  };
+
   // Categories
-  app.get("/api/categories", async (req, res) => {
+  app.get("/api/categories", ensureAuth, async (req, res) => {
     try {
-      const categories = await storage.getAllCategories();
+      const userId = req.user.id;
+      const categories = await storage.getAllCategories(userId);
       res.json(categories);
     } catch (err) {
       handleError(err, res);
     }
   });
 
-  app.post("/api/categories", async (req, res) => {
+  app.post("/api/categories", ensureAuth, async (req, res) => {
     try {
-      const data = insertCategorySchema.parse(req.body);
+      const userId = req.user.id;
+      const data = insertCategorySchema.parse({
+        ...req.body,
+        userId
+      });
       const category = await storage.createCategory(data);
       res.status(201).json(category);
     } catch (err) {
@@ -40,12 +53,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update a category
-  app.patch("/api/categories/:id", async (req, res) => {
+  app.patch("/api/categories/:id", ensureAuth, async (req: any, res: any) => {
     try {
+      const userId = req.user.id;
       const id = parseInt(req.params.id);
       const { name } = z.object({
         name: z.string().min(1)
       }).parse(req.body);
+      
+      // First check if this category belongs to the user
+      const category = await storage.getCategory(id);
+      if (!category || category.userId !== userId) {
+        return res.status(404).json({ message: "Category not found" });
+      }
       
       const updated = await storage.updateCategory(id, { name });
       if (!updated) {
@@ -59,9 +79,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Tasks
-  app.get("/api/tasks", async (req, res) => {
+  app.get("/api/tasks", ensureAuth, async (req: any, res: any) => {
     try {
-      const tasks = await storage.getAllTasks();
+      const userId = req.user.id;
+      const tasks = await storage.getAllTasks(userId);
       // Filter out archived tasks
       const activeTasks = tasks.filter(task => !task.archived);
       res.json(activeTasks);
