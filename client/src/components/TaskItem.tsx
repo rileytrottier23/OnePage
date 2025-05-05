@@ -99,13 +99,8 @@ export default function TaskItem({
   };
 
   const handleMoveTask = () => {
-    if (inTodaySection) {
-      // Move back to original category
-      moveTaskMutation.mutate(false);
-    } else {
-      // Open the category selection dropdown
-      setOpen(true);
-    }
+    // Always open the category selection dropdown
+    setOpen(true);
   };
 
   const handleSelectCategory = (categoryId: number | null) => {
@@ -212,14 +207,44 @@ export default function TaskItem({
       )}
       
       {inTodaySection ? (
-        <button 
-          className="text-muted-foreground hover:text-primary"
-          onClick={handleMoveTask}
-          disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
-          aria-label="Move back to original category"
-        >
-          <ChevronDown className="h-5 w-5" />
-        </button>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <button 
+              className="text-muted-foreground hover:text-primary"
+              onClick={handleMoveTask}
+              disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
+              aria-label="Move task to category"
+            >
+              <ChevronDown className="h-5 w-5" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="p-0 w-48" align="end" side="bottom">
+            <Command>
+              <CommandInput placeholder="Search categories..." />
+              <CommandEmpty>No categories found</CommandEmpty>
+              <CommandGroup heading="Move to">
+                {task.originalCategory && (
+                  <CommandItem 
+                    onSelect={() => moveTaskMutation.mutate(false)}
+                    className="font-medium"
+                  >
+                    {`Back to ${task.originalCategory}`}
+                  </CommandItem>
+                )}
+                {categories.map((category) => (
+                  <CommandItem
+                    key={category.id}
+                    onSelect={() => handleSelectCategory(category.id)}
+                    disabled={category.id === task.categoryId}
+                    className={category.id === task.categoryId ? "opacity-50" : ""}
+                  >
+                    {category.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
       ) : (
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
