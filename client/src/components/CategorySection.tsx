@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent, useRef } from "react";
+import { useState, KeyboardEvent, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
@@ -70,6 +70,9 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
     }
   });
 
+  const [focusNewTask, setFocusNewTask] = useState(false);
+  const newTaskInputRef = useRef<HTMLInputElement>(null);
+
   const handleAddTask = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && newTaskText.trim() !== "") {
       // Handle multi-line paste - split by newline characters
@@ -83,9 +86,31 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
       } else {
         // Single line - create a single task
         addTaskMutation.mutate(newTaskText.trim());
+        
+        // Set focus flag to focus on the input field after mutation completes
+        setFocusNewTask(true);
+      }
+    } else if (e.key === "Tab") {
+      // Prevent default Tab behavior
+      e.preventDefault();
+      
+      // If there's text in the input and we press Tab, create an indented task
+      if (newTaskText.trim() !== "") {
+        addTaskMutation.mutate(newTaskText.trim());
+        
+        // We'll handle indentation after task creation in useEffect
+        setFocusNewTask(true);
       }
     }
   };
+  
+  // Use effect to handle focusing the input field after task creation
+  useEffect(() => {
+    if (focusNewTask && !addTaskMutation.isPending && newTaskInputRef.current) {
+      newTaskInputRef.current.focus();
+      setFocusNewTask(false);
+    }
+  }, [focusNewTask, addTaskMutation.isPending]);
 
   const handleCreateSubtask = (parentId: number) => {
     setNewSubtaskId(parentId);
@@ -200,6 +225,7 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
         
         <div className="mt-3">
           <Input
+            ref={newTaskInputRef}
             type="text"
             placeholder={`Add a ${category.name.toLowerCase()} task...`}
             className="add-task-input w-full px-3 py-2 text-foreground"
@@ -220,7 +246,7 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
                 setNewTaskText(e.target.value);
               }
             }}
-            onKeyUp={handleAddTask}
+            onKeyDown={handleAddTask}
             disabled={addTaskMutation.isPending}
           />
         </div>

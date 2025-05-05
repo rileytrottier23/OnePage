@@ -1,12 +1,18 @@
 import { useState, KeyboardEvent, useRef } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
-import { Task } from "@shared/schema";
+import { Task, Category } from "@shared/schema";
 import { ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDraggable } from "@dnd-kit/core";
+import { 
+  Popover, 
+  PopoverContent, 
+  PopoverTrigger 
+} from "@/components/ui/popover";
+import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 
 interface TaskItemProps {
   task: Task;
@@ -65,13 +71,54 @@ export default function TaskItem({
     }
   });
 
+  const changeCategoryMutation = useMutation({
+    mutationFn: (categoryId: number) => {
+      if (categoryId === null || categoryId === undefined) {
+        return Promise.reject(new Error("Invalid category ID"));
+      }
+      return apiRequest("PATCH", `/api/tasks/${task.id}/category`, { 
+        categoryId 
+      }).then(res => res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+    }
+  });
+
+  // Fetch categories for the dropdown
+  const { data: categories = [] } = useQuery<Category[]>({ 
+    queryKey: ["/api/categories"],
+  });
+
+  const [open, setOpen] = useState(false);
+
   const handleCheckboxChange = (checked: boolean) => {
     setIsChecked(checked);
     updateTaskMutation.mutate({ completed: checked });
   };
 
   const handleMoveTask = () => {
-    moveTaskMutation.mutate(!inTodaySection);
+    if (inTodaySection) {
+      // Move back to original category
+      moveTaskMutation.mutate(false);
+    } else {
+      // Open the category selection dropdown
+      setOpen(true);
+    }
+  };
+
+  const handleSelectCategory = (categoryId: number | null) => {
+    if (categoryId === null) return;
+    
+    if (categoryId === task.categoryId) {
+      // Move to Today section instead
+      moveTaskMutation.mutate(true);
+    } else {
+      // Move to different category
+      changeCategoryMutation.mutate(categoryId);
+    }
+    setOpen(false);
   };
 
   const indentTaskMutation = useMutation({
@@ -164,18 +211,53 @@ export default function TaskItem({
         </span>
       )}
       
-      <button 
-        className="text-muted-foreground hover:text-primary"
-        onClick={handleMoveTask}
-        disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
-        aria-label={inTodaySection ? "Move back to original category" : "Move to Today"}
-      >
-        {inTodaySection ? (
+      {inTodaySection ? (
+        <button 
+          className="text-muted-foreground hover:text-primary"
+          onClick={handleMoveTask}
+          disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
+          aria-label="Move back to original category"
+        >
           <ChevronDown className="h-5 w-5" />
-        ) : (
-          <ChevronUp className="h-5 w-5" />
-        )}
-      </button>
+        </button>
+      ) : (
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <button 
+              className="text-muted-foreground hover:text-primary"
+              onClick={handleMoveTask}
+              disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
+              aria-label="Move task to category"
+            >
+              <ChevronUp className="h-5 w-5" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="p-0 w-48" align="end" side="top">
+            <Command>
+              <CommandInput placeholder="Search categories..." />
+              <CommandEmpty>No categories found</CommandEmpty>
+              <CommandGroup heading="Move to">
+                <CommandItem 
+                  onSelect={() => task.categoryId !== null ? handleSelectCategory(task.categoryId) : null}
+                  className="text-primary hover:bg-primary/10"
+                >
+                  Today
+                </CommandItem>
+                {categories.map((category) => (
+                  <CommandItem
+                    key={category.id}
+                    onSelect={() => handleSelectCategory(category.id)}
+                    disabled={category.id === task.categoryId && !task.inTodaySection}
+                    className={category.id === task.categoryId && !task.inTodaySection ? "opacity-50" : ""}
+                  >
+                    {category.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      )}
     </div>
   );
 }
