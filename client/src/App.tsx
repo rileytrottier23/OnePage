@@ -7,13 +7,19 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Archive from "@/pages/Archive";
 import About from "@/pages/About";
+import AuthPage from "@/pages/auth-page";
+import ContactPage from "@/pages/contact-page";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/archive" component={Archive} />
+      <ProtectedRoute path="/" component={Home} />
+      <ProtectedRoute path="/archive" component={Archive} />
       <Route path="/about" component={About} />
+      <Route path="/auth" component={AuthPage} />
+      <Route path="/contact" component={ContactPage} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -23,8 +29,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Router />
+        <AuthProvider>
+          <Toaster />
+          <Router />
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

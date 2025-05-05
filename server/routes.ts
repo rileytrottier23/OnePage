@@ -7,6 +7,9 @@ import { ZodError } from "zod";
 import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication
+  setupAuth(app);
+
   // Error handling middleware
   const handleError = (err: any, res: any) => {
     console.error("API Error:", err);
