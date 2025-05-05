@@ -90,6 +90,9 @@ export function setupAuth(app: Express) {
         ...req.body,
         password: await hashPassword(req.body.password),
       });
+      
+      // Create default categories for the new user
+      await storage.initializeDefaultCategories(user.id);
 
       req.login(user, (err) => {
         if (err) return next(err);

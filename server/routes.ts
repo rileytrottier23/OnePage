@@ -91,9 +91,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tasks/archived", async (req, res) => {
+  app.get("/api/tasks/archived", ensureAuth, async (req: any, res: any) => {
     try {
-      const tasks = await storage.getAllTasks();
+      const userId = req.user.id;
+      const tasks = await storage.getAllTasks(userId);
       // Return only archived tasks
       const archivedTasks = tasks.filter(task => task.archived);
       res.json(archivedTasks);
@@ -102,9 +103,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tasks", async (req, res) => {
+  app.post("/api/tasks", ensureAuth, async (req: any, res: any) => {
     try {
-      const taskData = insertTaskSchema.parse(req.body);
+      const userId = req.user.id;
+      const taskData = insertTaskSchema.parse({
+        ...req.body,
+        userId
+      });
       
       // If task is added to Today but has a categoryId,
       // we need to get the category name for reference
@@ -138,8 +143,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/tasks/:id", async (req, res) => {
+  app.patch("/api/tasks/:id", ensureAuth, async (req: any, res: any) => {
     try {
+      const userId = req.user.id;
       const id = parseInt(req.params.id);
       const taskSchema = z.object({
         text: z.string().optional(),
@@ -149,16 +155,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         indentLevel: z.number().optional(),
       });
       
+      // First check if this task belongs to the user
+      const task = await storage.getTask(id, userId);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
       const updates = taskSchema.parse(req.body);
       
       // If marking as completed, set completedAt timestamp
       if (updates.completed === true) {
         const completedDate = new Date();
-        await storage.updateTask(id, { ...updates, completedAt: completedDate });
-        return res.json(await storage.getTask(id));
+        await storage.updateTask(id, { ...updates, completedAt: completedDate }, userId);
+        return res.json(await storage.getTask(id, userId));
       }
       
-      const updated = await storage.updateTask(id, updates);
+      const updated = await storage.updateTask(id, updates, userId);
       if (!updated) {
         return res.status(404).json({ message: "Task not found" });
       }
@@ -170,15 +182,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Route to update task indentation
-  app.patch("/api/tasks/:id/indent", async (req, res) => {
+  app.patch("/api/tasks/:id/indent", ensureAuth, async (req: any, res: any) => {
     try {
+      const userId = req.user.id;
       const id = parseInt(req.params.id);
       
       const { increase } = z.object({
         increase: z.boolean(),
       }).parse(req.body);
       
-      const task = await storage.getTask(id);
+      const task = await storage.getTask(id, userId);
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }
@@ -194,7 +207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updated = await storage.updateTask(id, {
         indentLevel: newIndentLevel,
-      });
+      }, userId);
       
       res.json(updated);
     } catch (err) {
