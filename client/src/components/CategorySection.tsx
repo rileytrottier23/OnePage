@@ -137,15 +137,62 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
     return rootTasks.flatMap(renderTaskHierarchy);
   };
 
+  const handleSaveCategoryName = () => {
+    if (categoryName.trim() !== '' && categoryName !== category.name) {
+      updateCategoryMutation.mutate(categoryName.trim());
+    } else {
+      setIsEditingCategory(false);
+      setCategoryName(category.name);
+    }
+  };
+
+  const handleCategoryNameKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSaveCategoryName();
+    } else if (e.key === 'Escape') {
+      setIsEditingCategory(false);
+      setCategoryName(category.name);
+    }
+  };
+
   return (
-    <section className="mb-6 category-container p-4">
+    <section 
+      ref={setNodeRef} 
+      className="mb-6 category-container p-4 transition-colors duration-200 hover:bg-card/80"
+    >
       <div className="flex justify-between items-center mb-3">
-        <h2 className="text-xl font-semibold flex items-center">
-          {category.name}
-          <Badge variant="outline" className="ml-2 bg-primary bg-opacity-20 text-primary">
-            {activeTasks.length}
-          </Badge>
-        </h2>
+        {isEditingCategory ? (
+          <div className="flex items-center">
+            <Input
+              type="text"
+              value={categoryName}
+              onChange={(e) => setCategoryName(e.target.value)}
+              onKeyDown={handleCategoryNameKeyDown}
+              className="text-xl font-semibold bg-background/70 focus:bg-background"
+              autoFocus
+            />
+            <button 
+              onClick={handleSaveCategoryName}
+              className="ml-2 p-1 rounded-full hover:bg-muted"
+              disabled={updateCategoryMutation.isPending}
+            >
+              <Check className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <h2 className="text-xl font-semibold flex items-center group">
+            <span>{category.name}</span>
+            <span className="ml-2 text-muted-foreground">
+              {activeTasks.length}
+            </span>
+            <button 
+              onClick={() => setIsEditingCategory(true)}
+              className="ml-2 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-muted transition-opacity"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          </h2>
+        )}
       </div>
 
       <div className="tasks-container">

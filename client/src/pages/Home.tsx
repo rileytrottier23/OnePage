@@ -10,16 +10,18 @@ import { PlusIcon, Settings, Archive } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
+import { Task, Category } from "@shared/schema";
 
 export default function Home() {
   const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
 
-  const { data: tasks = [], isLoading: tasksLoading } = useQuery({
+  const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"]
   });
 
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery<Category[]>({
     queryKey: ["/api/categories"]
   });
 
@@ -32,6 +34,17 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       setIsAddCategoryDialogOpen(false);
       setNewCategoryName("");
+    }
+  });
+  
+  // Move task to a different category
+  const moveTaskMutation = useMutation({
+    mutationFn: ({ taskId, categoryId }: { taskId: number, categoryId: number }) => {
+      return apiRequest("PATCH", `/api/tasks/${taskId}/category`, { categoryId })
+        .then(res => res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
     }
   });
 
@@ -53,6 +66,29 @@ export default function Home() {
     );
   }
 
+  // Handle drag end for moving tasks between categories
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over) return;
+    
+    // Extract the data from the active and over elements
+    const activeData = active.data.current;
+    const overData = over.data.current;
+    
+    if (
+      activeData?.type === 'task' && 
+      overData?.type === 'category' && 
+      activeData.task.categoryId !== overData.categoryId
+    ) {
+      // Move task to a different category
+      moveTaskMutation.mutate({
+        taskId: activeData.task.id,
+        categoryId: overData.categoryId
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 sm:px-6 max-w-3xl min-h-screen">
       <header className="py-6 sticky top-0 bg-background z-10">
@@ -64,35 +100,40 @@ export default function Home() {
         </div>
       </header>
 
-      <main>
-        <TodaySection tasks={tasks} />
+      <DndContext 
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <main>
+          <TodaySection tasks={tasks} />
 
-        {categories.map(category => (
-          <CategorySection 
-            key={category.id} 
-            category={category} 
-            tasks={tasks.filter(task => task.categoryId === category.id)}
-          />
-        ))}
+          {categories.map(category => (
+            <CategorySection 
+              key={category.id} 
+              category={category} 
+              tasks={tasks.filter(task => task.categoryId === category.id)}
+            />
+          ))}
 
-        <Button 
-          className="w-full py-3 px-4 bg-card hover:bg-opacity-90 rounded-md flex items-center justify-center text-primary mb-6"
-          variant="ghost"
-          onClick={() => setIsAddCategoryDialogOpen(true)}
-        >
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Add New Category
-        </Button>
+          <Button 
+            className="w-full py-3 px-4 bg-card hover:bg-opacity-90 rounded-md flex items-center justify-center text-primary mb-6"
+            variant="ghost"
+            onClick={() => setIsAddCategoryDialogOpen(true)}
+          >
+            <PlusIcon className="h-5 w-5 mr-2" />
+            Add New Category
+          </Button>
 
-        <div className="text-center mb-6">
-          <Link href="/archive">
-            <Button variant="ghost" className="text-muted-foreground hover:text-primary inline-flex items-center">
-              <Archive className="h-5 w-5 mr-2" />
-              View Archived Tasks
-            </Button>
-          </Link>
-        </div>
-      </main>
+          <div className="text-center mb-6">
+            <Link href="/archive">
+              <Button variant="ghost" className="text-muted-foreground hover:text-primary inline-flex items-center">
+                <Archive className="h-5 w-5 mr-2" />
+                View Archived Tasks
+              </Button>
+            </Link>
+          </div>
+        </main>
+      </DndContext>
 
       <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
         <DialogContent className="bg-card">
