@@ -142,6 +142,11 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createCategory(insertCategory: InsertCategory): Promise<Category> {
+    // Ensure userId is provided for security
+    if (!insertCategory.userId) {
+      throw new Error("User ID is required to create a category");
+    }
+    
     const [category] = await db
       .insert(categories)
       .values(insertCategory)
@@ -150,54 +155,35 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateCategory(id: number, updates: Partial<Category>, userId?: number): Promise<Category | undefined> {
-    let category;
-    
-    if (userId) {
-      [category] = await db
-        .select()
-        .from(categories)
-        .where(and(eq(categories.id, id), eq(categories.userId, userId)));
-    } else {
-      [category] = await db
-        .select()
-        .from(categories)
-        .where(eq(categories.id, id));
+    if (!userId) {
+      return undefined; // If no userId provided, return undefined for security
     }
+    
+    // Find the category that belongs to this user
+    const [category] = await db
+      .select()
+      .from(categories)
+      .where(and(eq(categories.id, id), eq(categories.userId, userId)));
     
     if (!category) return undefined;
     
-    let updatedCategory;
-    
-    if (userId) {
-      [updatedCategory] = await db
-        .update(categories)
-        .set(updates)
-        .where(and(eq(categories.id, id), eq(categories.userId, userId)))
-        .returning();
-    } else {
-      [updatedCategory] = await db
-        .update(categories)
-        .set(updates)
-        .where(eq(categories.id, id))
-        .returning();
-    }
+    // Update the category ensuring user ownership
+    const [updatedCategory] = await db
+      .update(categories)
+      .set(updates)
+      .where(and(eq(categories.id, id), eq(categories.userId, userId)))
+      .returning();
     
     // If the category name was updated, also update originalCategory in all tasks
+    // but only for this user's tasks
     if (updates.name && updates.name !== category.name) {
-      if (userId) {
-        await db
-          .update(tasks)
-          .set({ originalCategory: updates.name })
-          .where(and(
-            eq(tasks.originalCategory, category.name),
-            eq(tasks.userId, userId)
-          ));
-      } else {
-        await db
-          .update(tasks)
-          .set({ originalCategory: updates.name })
-          .where(eq(tasks.originalCategory, category.name));
-      }
+      await db
+        .update(tasks)
+        .set({ originalCategory: updates.name })
+        .where(and(
+          eq(tasks.originalCategory, category.name),
+          eq(tasks.userId, userId)
+        ));
     }
     
     return updatedCategory;
@@ -205,31 +191,34 @@ export class DatabaseStorage implements IStorage {
   
   // Task methods
   async getAllTasks(userId?: number): Promise<Task[]> {
-    if (userId) {
-      return await db
-        .select()
-        .from(tasks)
-        .where(eq(tasks.userId, userId));
+    if (!userId) {
+      return []; // If no userId provided, return empty array for security
     }
-    return await db.select().from(tasks);
+    
+    return await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.userId, userId));
   }
   
   async getTask(id: number, userId?: number): Promise<Task | undefined> {
-    if (userId) {
-      const [task] = await db
-        .select()
-        .from(tasks)
-        .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
-      return task;
+    if (!userId) {
+      return undefined; // If no userId provided, return undefined for security
     }
+    
     const [task] = await db
       .select()
       .from(tasks)
-      .where(eq(tasks.id, id));
+      .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
     return task;
   }
   
   async createTask(insertTask: InsertTask & { originalCategory?: string | null }): Promise<Task> {
+    // Ensure userId is provided for security
+    if (!insertTask.userId) {
+      throw new Error("User ID is required to create a task");
+    }
+    
     const now = new Date();
     
     const taskData = {
@@ -243,7 +232,7 @@ export class DatabaseStorage implements IStorage {
       originalCategory: insertTask.originalCategory || null,
       parentTaskId: insertTask.parentTaskId || null,
       indentLevel: insertTask.indentLevel || 0,
-      userId: insertTask.userId || null,
+      userId: insertTask.userId,
     };
     
     const [task] = await db
@@ -254,45 +243,40 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateTask(id: number, updates: Partial<Task>, userId?: number): Promise<Task | undefined> {
-    if (userId) {
-      const [updated] = await db
-        .update(tasks)
-        .set(updates)
-        .where(and(eq(tasks.id, id), eq(tasks.userId, userId)))
-        .returning();
-      return updated;
+    if (!userId) {
+      return undefined; // If no userId provided, return undefined for security
     }
     
     const [updated] = await db
       .update(tasks)
       .set(updates)
-      .where(eq(tasks.id, id))
+      .where(and(eq(tasks.id, id), eq(tasks.userId, userId)))
       .returning();
     return updated;
   }
   
   async deleteTask(id: number, userId?: number): Promise<boolean> {
-    if (userId) {
-      await db
-        .delete(tasks)
-        .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
-    } else {
-      await db
-        .delete(tasks)
-        .where(eq(tasks.id, id));
+    if (!userId) {
+      return false; // If no userId provided, return false for security
     }
+    
+    await db
+      .delete(tasks)
+      .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
+    
     return true; // PostgreSQL doesn't return count, but operation succeeded if no error
   }
   
   async archiveCompletedTasks(userId?: number): Promise<void> {
+    if (!userId) {
+      return; // If no userId provided, do nothing for security
+    }
+    
     const conditions = [
       eq(tasks.completed, true),
-      eq(tasks.archived, false)
+      eq(tasks.archived, false),
+      eq(tasks.userId, userId)
     ];
-    
-    if (userId) {
-      conditions.push(eq(tasks.userId, userId));
-    }
     
     await db
       .update(tasks)
