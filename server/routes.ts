@@ -72,6 +72,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Handle indentation level for subtasks
+      if (taskData.parentTaskId && taskData.indentLevel === undefined) {
+        const parentTask = await storage.getTask(taskData.parentTaskId);
+        if (parentTask) {
+          taskData.indentLevel = (parentTask.indentLevel || 0) + 1;
+        } else {
+          taskData.indentLevel = 0;
+          taskData.parentTaskId = null;
+        }
+      }
+      
       const task = await storage.createTask({
         ...taskData,
         originalCategory
@@ -90,13 +101,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         text: z.string().optional(),
         completed: z.boolean().optional(),
         archived: z.boolean().optional(),
+        parentTaskId: z.number().optional(),
+        indentLevel: z.number().optional(),
       });
       
       const updates = taskSchema.parse(req.body);
       
       // If marking as completed, set completedAt timestamp
       if (updates.completed === true) {
-        updates.completedAt = new Date();
+        const completedDate = new Date();
+        await storage.updateTask(id, { ...updates, completedAt: completedDate });
+        return res.json(await storage.getTask(id));
       }
       
       const updated = await storage.updateTask(id, updates);
@@ -160,6 +175,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // This will archive all completed tasks
       await storage.archiveCompletedTasks();
       res.json({ message: "Completed tasks archived successfully" });
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+  
+  // Create subtask endpoint
+  app.post("/api/tasks/:id/subtask", async (req, res) => {
+    try {
+      const parentId = parseInt(req.params.id);
+      const parentTask = await storage.getTask(parentId);
+      
+      if (!parentTask) {
+        return res.status(404).json({ message: "Parent task not found" });
+      }
+      
+      const { text } = z.object({
+        text: z.string().min(1)
+      }).parse(req.body);
+      
+      const indentLevel = (parentTask.indentLevel || 0) + 1;
+      
+      const subtask = await storage.createTask({
+        text,
+        categoryId: parentTask.categoryId,
+        inTodaySection: parentTask.inTodaySection,
+        parentTaskId: parentId,
+        indentLevel
+      });
+      
+      res.status(201).json(subtask);
     } catch (err) {
       handleError(err, res);
     }

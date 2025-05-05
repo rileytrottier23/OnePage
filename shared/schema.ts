@@ -26,12 +26,16 @@ export const tasks = pgTable("tasks", {
   archived: boolean("archived").notNull().default(false),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  parentTaskId: integer("parent_task_id"),
+  indentLevel: integer("indent_level").notNull().default(0),
 });
 
 export const insertTaskSchema = createInsertSchema(tasks).pick({
   text: true,
   categoryId: true,
   inTodaySection: true,
+  parentTaskId: true,
+  indentLevel: true,
 });
 
 export type InsertTask = z.infer<typeof insertTaskSchema>;

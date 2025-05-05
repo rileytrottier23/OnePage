@@ -103,13 +103,17 @@ export class MemStorage implements IStorage {
     const now = new Date();
     
     const task: Task = {
-      ...insertTask,
       id,
+      text: insertTask.text,
       completed: false,
+      categoryId: insertTask.categoryId || null,
+      inTodaySection: insertTask.inTodaySection || false,
       archived: false,
       createdAt: now,
       completedAt: null,
       originalCategory: insertTask.originalCategory || null,
+      parentTaskId: insertTask.parentTaskId || null,
+      indentLevel: insertTask.indentLevel || 0,
     };
     
     this.tasks.set(id, task);

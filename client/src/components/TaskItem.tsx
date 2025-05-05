@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, KeyboardEvent, useRef } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -11,10 +11,19 @@ interface TaskItemProps {
   task: Task;
   inTodaySection?: boolean;
   categoryName?: string;
+  onCreateSubtask?: (taskId: number) => void;
+  focusRef?: React.RefObject<HTMLDivElement>;
 }
 
-export default function TaskItem({ task, inTodaySection = false, categoryName }: TaskItemProps) {
+export default function TaskItem({ 
+  task, 
+  inTodaySection = false, 
+  categoryName,
+  onCreateSubtask,
+  focusRef
+}: TaskItemProps) {
   const [isChecked, setIsChecked] = useState(task.completed);
+  const taskRef = useRef<HTMLDivElement>(null);
 
   const updateTaskMutation = useMutation({
     mutationFn: (updatedTask: Partial<Task>) => {
@@ -48,18 +57,38 @@ export default function TaskItem({ task, inTodaySection = false, categoryName }:
     moveTaskMutation.mutate(!inTodaySection);
   };
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    // Create subtask when Tab is pressed
+    if (e.key === 'Tab' && !e.shiftKey && onCreateSubtask) {
+      e.preventDefault();
+      onCreateSubtask(task.id);
+    }
+  };
+
+  // Determine indentation level class
+  const indentClass = task.indentLevel > 0 ? `task-indent-${task.indentLevel}` : '';
+
   return (
-    <div className={cn(
-      "task-item flex items-center p-2 rounded-md",
-      updateTaskMutation.isPending && "opacity-70"
-    )}>
+    <div 
+      ref={focusRef || taskRef}
+      className={cn(
+        "task-item flex items-center rounded-md",
+        indentClass,
+        updateTaskMutation.isPending && "opacity-70"
+      )}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+    >
       <Checkbox 
         className="h-5 w-5 rounded border-gray-600 mr-3"
         checked={isChecked} 
         onCheckedChange={handleCheckboxChange}
         disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
       />
-      <span className={cn("flex-grow", task.completed && "completed-task")}>
+      <span className={cn("flex-grow flex items-center", task.completed && "completed-task")}>
+        {task.indentLevel > 0 && (
+          <span className="subtask-indicator"></span>
+        )}
         {task.text}
       </span>
       
