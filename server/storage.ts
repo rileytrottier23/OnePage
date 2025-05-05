@@ -21,6 +21,7 @@ export interface IStorage {
   getAllCategories(): Promise<Category[]>;
   getCategory(id: number): Promise<Category | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
+  updateCategory(id: number, updates: Partial<Category>): Promise<Category | undefined>;
   
   // Task methods
   getAllTasks(): Promise<Task[]>;
@@ -87,6 +88,26 @@ export class MemStorage implements IStorage {
     const category: Category = { ...insertCategory, id };
     this.categories.set(id, category);
     return category;
+  }
+  
+  async updateCategory(id: number, updates: Partial<Category>): Promise<Category | undefined> {
+    const category = this.categories.get(id);
+    if (!category) return undefined;
+    
+    const updatedCategory = { ...category, ...updates };
+    this.categories.set(id, updatedCategory);
+    
+    // If the category name was updated, also update originalCategory in all tasks
+    if (updates.name && updates.name !== category.name) {
+      const tasks = Array.from(this.tasks.values());
+      for (const task of tasks) {
+        if (task.originalCategory === category.name) {
+          await this.updateTask(task.id, { originalCategory: updates.name });
+        }
+      }
+    }
+    
+    return updatedCategory;
   }
   
   // Task methods

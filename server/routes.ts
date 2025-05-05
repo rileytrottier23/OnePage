@@ -34,6 +34,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       handleError(err, res);
     }
   });
+  
+  // Update a category
+  app.patch("/api/categories/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { name } = z.object({
+        name: z.string().min(1)
+      }).parse(req.body);
+      
+      const updated = await storage.updateCategory(id, { name });
+      if (!updated) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      res.json(updated);
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
 
   // Tasks
   app.get("/api/tasks", async (req, res) => {
@@ -205,6 +224,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.status(201).json(subtask);
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+  
+  // Move task to another category endpoint
+  app.patch("/api/tasks/:id/category", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { categoryId } = z.object({
+        categoryId: z.number()
+      }).parse(req.body);
+      
+      const task = await storage.getTask(id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      const category = await storage.getCategory(categoryId);
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      // Update the task with the new category
+      const updated = await storage.updateTask(id, {
+        categoryId,
+        inTodaySection: false, // If moved to a category, it's no longer in Today
+        originalCategory: null // Reset original category
+      });
+      
+      res.json(updated);
     } catch (err) {
       handleError(err, res);
     }

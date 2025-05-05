@@ -6,6 +6,8 @@ import { Task, Category } from "@shared/schema";
 import TaskItem from "./TaskItem";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Pencil, Check } from "lucide-react";
+import { useDroppable } from "@dnd-kit/core";
 
 interface CategorySectionProps {
   category: Category;
@@ -15,7 +17,18 @@ interface CategorySectionProps {
 export default function CategorySection({ category, tasks }: CategorySectionProps) {
   const [newTaskText, setNewTaskText] = useState("");
   const [newSubtaskId, setNewSubtaskId] = useState<number | null>(null);
+  const [isEditingCategory, setIsEditingCategory] = useState(false);
+  const [categoryName, setCategoryName] = useState(category.name);
   const newSubtaskRef = useRef<HTMLDivElement>(null);
+  
+  // Setup droppable area for drag and drop
+  const { setNodeRef } = useDroppable({
+    id: `category-${category.id}`,
+    data: {
+      type: 'category',
+      categoryId: category.id
+    }
+  });
 
   // Filter active tasks and sort by parent-child relationships
   const activeTasks = tasks.filter(task => !task.inTodaySection);
@@ -43,6 +56,17 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       setNewSubtaskId(null);
+    }
+  });
+  
+  const updateCategoryMutation = useMutation({
+    mutationFn: (name: string) => {
+      return apiRequest("PATCH", `/api/categories/${category.id}`, { name })
+        .then(res => res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      setIsEditingCategory(false);
     }
   });
 
