@@ -30,14 +30,16 @@ async function comparePasswords(supplied: string, stored: string) {
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "keyboard cat", // In production, use a proper secret
+    secret: process.env.SESSION_SECRET || "keyboard cat",
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
-      sameSite: "lax"
-    }
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production"
+    },
+    proxy: process.env.NODE_ENV === "production"
   };
 
   app.set("trust proxy", 1);
