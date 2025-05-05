@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertCategorySchema, insertTaskSchema } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
+import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Error handling middleware
