@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // we need to get the category name for reference
       let originalCategory = null;
       if (taskData.inTodaySection && taskData.categoryId) {
-        const category = await storage.getCategory(taskData.categoryId);
+        const category = await storage.getCategory(taskData.categoryId, userId);
         if (category) {
           originalCategory = category.name;
         }
@@ -123,7 +123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Handle indentation level for subtasks
       if (taskData.parentTaskId && taskData.indentLevel === undefined) {
-        const parentTask = await storage.getTask(taskData.parentTaskId);
+        const parentTask = await storage.getTask(taskData.parentTaskId, userId);
         if (parentTask) {
           taskData.indentLevel = (parentTask.indentLevel || 0) + 1;
         } else {
@@ -234,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Only set originalCategory if the task already has a category
         if (task.categoryId) {
-          const category = await storage.getCategory(task.categoryId);
+          const category = await storage.getCategory(task.categoryId, userId);
           if (category) {
             originalCategory = category.name;
           }
@@ -318,7 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Task not found" });
       }
       
-      const category = await storage.getCategory(categoryId);
+      const category = await storage.getCategory(categoryId, userId);
       if (!category) {
         return res.status(404).json({ message: "Category not found" });
       }
