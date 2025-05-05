@@ -5,8 +5,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import TodaySection from "@/components/TodaySection";
 import CategorySection from "@/components/CategorySection";
+import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, Settings, Archive } from "lucide-react";
+import { PlusIcon, Settings, Archive as ArchiveIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,14 +92,9 @@ export default function Home() {
 
   return (
     <div className="container mx-auto px-4 sm:px-6 max-w-3xl min-h-screen">
-      <header className="py-6 sticky top-0 bg-background z-10">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-semibold text-primary">OnePage</h1>
-          <Button variant="ghost" size="icon">
-            <Settings className="h-6 w-6 text-muted-foreground hover:text-primary" />
-          </Button>
-        </div>
-      </header>
+      <div className="py-6 sticky top-0 bg-background z-10">
+        <Header />
+      </div>
 
       <DndContext 
         collisionDetection={closestCenter}
@@ -127,7 +123,7 @@ export default function Home() {
           <div className="text-center mb-6">
             <Link href="/archive">
               <Button variant="ghost" className="text-muted-foreground hover:text-primary inline-flex items-center">
-                <Archive className="h-5 w-5 mr-2" />
+                <ArchiveIcon className="h-5 w-5 mr-2" />
                 View Archived Tasks
               </Button>
             </Link>
