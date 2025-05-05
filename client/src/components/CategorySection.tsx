@@ -48,7 +48,18 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
 
   const handleAddTask = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && newTaskText.trim() !== "") {
-      addTaskMutation.mutate(newTaskText.trim());
+      // Handle multi-line paste - split by newline characters
+      const lines = newTaskText.trim().split(/\r?\n/).filter(line => line.trim() !== "");
+      
+      if (lines.length > 1) {
+        // Multiple lines detected - create multiple tasks
+        lines.forEach(line => {
+          addTaskMutation.mutate(line.trim());
+        });
+      } else {
+        // Single line - create a single task
+        addTaskMutation.mutate(newTaskText.trim());
+      }
     }
   };
 
@@ -122,7 +133,22 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
             placeholder={`Add a ${category.name.toLowerCase()} task...`}
             className="add-task-input w-full px-3 py-2 text-foreground"
             value={newTaskText}
-            onChange={e => setNewTaskText(e.target.value)}
+            onChange={e => {
+              // Check if this is a paste event with multiple lines
+              if (e.target.value.includes('\n')) {
+                const lines = e.target.value.split(/\r?\n/).filter(line => line.trim() !== "");
+                
+                // Process multi-line input
+                lines.forEach(line => {
+                  addTaskMutation.mutate(line.trim());
+                });
+                
+                // Clear the input after processing
+                setNewTaskText("");
+              } else {
+                setNewTaskText(e.target.value);
+              }
+            }}
             onKeyUp={handleAddTask}
             disabled={addTaskMutation.isPending}
           />
