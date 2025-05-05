@@ -6,7 +6,6 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
-import MemoryStore from "memorystore";
 
 declare global {
   namespace Express {
@@ -30,15 +29,11 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  const MemStore = MemoryStore(session);
-
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "keyboard cat", // In production, use a proper secret
     resave: false,
     saveUninitialized: false,
-    store: new MemStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    }),
+    store: storage.sessionStore,
     cookie: {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
       sameSite: "lax"

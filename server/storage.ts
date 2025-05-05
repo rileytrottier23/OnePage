@@ -9,6 +9,11 @@ import {
   type User, 
   type InsertUser 
 } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
+import { db } from "./db";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
 // Interface for storage operations
 export interface IStorage {
@@ -31,87 +36,111 @@ export interface IStorage {
   updateTask(id: number, updates: Partial<Task>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
   archiveCompletedTasks(): Promise<void>;
+  
+  // Session store for authentication
+  sessionStore: session.Store;
 }
 
-// In-memory storage implementation
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private categories: Map<number, Category>;
-  private tasks: Map<number, Task>;
-  userCurrentId: number;
-  categoryCurrentId: number;
-  taskCurrentId: number;
+const PostgresSessionStore = connectPg(session);
+
+// Database storage implementation
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.categories = new Map();
-    this.tasks = new Map();
-    this.userCurrentId = 1;
-    this.categoryCurrentId = 1;
-    this.taskCurrentId = 1;
-    
-    // Initialize with default categories
-    const defaultCategories = ["Work", "Personal", "Errands"];
-    defaultCategories.forEach(name => {
-      this.createCategory({ name });
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
     });
+    
+    // Initialize with default categories if there are none
+    this.initializeDefaultCategories();
   }
 
-  // User methods (kept from original)
+  private async initializeDefaultCategories() {
+    const existingCategories = await db.select().from(categories);
+    if (existingCategories.length === 0) {
+      const defaultCategories = ["Work", "Personal", "Errands"];
+      for (const name of defaultCategories) {
+        await this.createCategory({ name });
+      }
+    }
+  }
+
+  // User methods
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
+    return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email,
-    );
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userCurrentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
   
   // Category methods
   async getAllCategories(): Promise<Category[]> {
-    return Array.from(this.categories.values());
+    return await db.select().from(categories);
   }
   
   async getCategory(id: number): Promise<Category | undefined> {
-    return this.categories.get(id);
+    const [category] = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.id, id));
+    return category;
   }
   
   async createCategory(insertCategory: InsertCategory): Promise<Category> {
-    const id = this.categoryCurrentId++;
-    const category: Category = { ...insertCategory, id };
-    this.categories.set(id, category);
+    const [category] = await db
+      .insert(categories)
+      .values(insertCategory)
+      .returning();
     return category;
   }
   
   async updateCategory(id: number, updates: Partial<Category>): Promise<Category | undefined> {
-    const category = this.categories.get(id);
+    const [category] = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.id, id));
+    
     if (!category) return undefined;
     
-    const updatedCategory = { ...category, ...updates };
-    this.categories.set(id, updatedCategory);
+    const [updatedCategory] = await db
+      .update(categories)
+      .set(updates)
+      .where(eq(categories.id, id))
+      .returning();
     
     // If the category name was updated, also update originalCategory in all tasks
     if (updates.name && updates.name !== category.name) {
-      const tasks = Array.from(this.tasks.values());
-      for (const task of tasks) {
-        if (task.originalCategory === category.name) {
-          await this.updateTask(task.id, { originalCategory: updates.name });
-        }
-      }
+      await db
+        .update(tasks)
+        .set({ originalCategory: updates.name })
+        .where(eq(tasks.originalCategory, category.name));
     }
     
     return updatedCategory;
@@ -119,19 +148,21 @@ export class MemStorage implements IStorage {
   
   // Task methods
   async getAllTasks(): Promise<Task[]> {
-    return Array.from(this.tasks.values());
+    return await db.select().from(tasks);
   }
   
   async getTask(id: number): Promise<Task | undefined> {
-    return this.tasks.get(id);
+    const [task] = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, id));
+    return task;
   }
   
   async createTask(insertTask: InsertTask & { originalCategory?: string | null }): Promise<Task> {
-    const id = this.taskCurrentId++;
     const now = new Date();
     
-    const task: Task = {
-      id,
+    const taskData = {
       text: insertTask.text,
       completed: false,
       categoryId: insertTask.categoryId || null,
@@ -144,32 +175,40 @@ export class MemStorage implements IStorage {
       indentLevel: insertTask.indentLevel || 0,
     };
     
-    this.tasks.set(id, task);
+    const [task] = await db
+      .insert(tasks)
+      .values(taskData)
+      .returning();
     return task;
   }
   
   async updateTask(id: number, updates: Partial<Task>): Promise<Task | undefined> {
-    const task = this.tasks.get(id);
-    if (!task) return undefined;
-    
-    const updatedTask = { ...task, ...updates };
-    this.tasks.set(id, updatedTask);
-    return updatedTask;
+    const [updated] = await db
+      .update(tasks)
+      .set(updates)
+      .where(eq(tasks.id, id))
+      .returning();
+    return updated;
   }
   
   async deleteTask(id: number): Promise<boolean> {
-    return this.tasks.delete(id);
+    const result = await db
+      .delete(tasks)
+      .where(eq(tasks.id, id));
+    return true; // PostgreSQL doesn't return count, but operation succeeded if no error
   }
   
   async archiveCompletedTasks(): Promise<void> {
-    // Get all completed tasks and mark them as archived
-    const tasks = Array.from(this.tasks.values());
-    for (const task of tasks) {
-      if (task.completed && !task.archived) {
-        await this.updateTask(task.id, { archived: true });
-      }
-    }
+    await db
+      .update(tasks)
+      .set({ archived: true })
+      .where(
+        and(
+          eq(tasks.completed, true),
+          eq(tasks.archived, false)
+        )
+      );
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
