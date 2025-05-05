@@ -1,0 +1,53 @@
+import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+// Category Schema
+export const categories = pgTable("categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+});
+
+export const insertCategorySchema = createInsertSchema(categories).pick({
+  name: true,
+});
+
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
+export type Category = typeof categories.$inferSelect;
+
+// Task Schema
+export const tasks = pgTable("tasks", {
+  id: serial("id").primaryKey(),
+  text: text("text").notNull(),
+  completed: boolean("completed").notNull().default(false),
+  categoryId: integer("category_id").references(() => categories.id),
+  inTodaySection: boolean("in_today_section").notNull().default(false),
+  originalCategory: text("original_category"),
+  archived: boolean("archived").notNull().default(false),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertTaskSchema = createInsertSchema(tasks).pick({
+  text: true,
+  categoryId: true,
+  inTodaySection: true,
+});
+
+export type InsertTask = z.infer<typeof insertTaskSchema>;
+export type Task = typeof tasks.$inferSelect;
+
+// User Schema - kept from original
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+});
+
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true,
+});
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
