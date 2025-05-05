@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent } from "react";
+import { useState, KeyboardEvent, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
@@ -14,7 +14,10 @@ interface CategorySectionProps {
 
 export default function CategorySection({ category, tasks }: CategorySectionProps) {
   const [newTaskText, setNewTaskText] = useState("");
+  const [newSubtaskId, setNewSubtaskId] = useState<number | null>(null);
+  const newSubtaskRef = useRef<HTMLDivElement>(null);
 
+  // Filter active tasks and sort by parent-child relationships
   const activeTasks = tasks.filter(task => !task.inTodaySection);
   
   const addTaskMutation = useMutation({
@@ -31,10 +34,72 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
     }
   });
 
+  const createSubtaskMutation = useMutation({
+    mutationFn: ({ parentId, text }: { parentId: number, text: string }) => {
+      return apiRequest("POST", `/api/tasks/${parentId}/subtask`, { text })
+        .then(res => res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      setNewSubtaskId(null);
+    }
+  });
+
   const handleAddTask = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && newTaskText.trim() !== "") {
       addTaskMutation.mutate(newTaskText.trim());
     }
+  };
+
+  const handleCreateSubtask = (parentId: number) => {
+    setNewSubtaskId(parentId);
+    // Focus will be handled after render via the ref
+    setTimeout(() => {
+      if (newSubtaskRef.current) {
+        newSubtaskRef.current.focus();
+      }
+    }, 0);
+  };
+
+  // Group tasks by their hierarchy
+  const organizeTasks = () => {
+    // First, organize tasks by parent-child relationship
+    const rootTasks = activeTasks.filter(task => !task.parentTaskId);
+    const taskMap = new Map<number, Task[]>();
+    
+    // Create a map of parent to children
+    activeTasks.forEach(task => {
+      if (task.parentTaskId) {
+        const children = taskMap.get(task.parentTaskId) || [];
+        children.push(task);
+        taskMap.set(task.parentTaskId, children);
+      }
+    });
+
+    // Helper function to render a task and its children
+    const renderTaskHierarchy = (task: Task): JSX.Element[] => {
+      const result: JSX.Element[] = [
+        <TaskItem 
+          key={task.id} 
+          task={task} 
+          categoryName={category.name}
+          onCreateSubtask={handleCreateSubtask}
+          focusRef={newSubtaskId === task.id ? newSubtaskRef : undefined}
+        />
+      ];
+      
+      // Add children (if any)
+      const children = taskMap.get(task.id) || [];
+      children.forEach(child => {
+        result.push(...renderTaskHierarchy(child));
+      });
+      
+      return result;
+    };
+    
+    // Render all root tasks and their children
+    return rootTasks.flatMap(renderTaskHierarchy);
   };
 
   return (
@@ -48,14 +113,8 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
         </h2>
       </div>
 
-      <div className="space-y-2">
-        {activeTasks.map(task => (
-          <TaskItem 
-            key={task.id} 
-            task={task} 
-            categoryName={category.name}
-          />
-        ))}
+      <div className="tasks-container">
+        {organizeTasks()}
         
         <div className="mt-3">
           <Input
