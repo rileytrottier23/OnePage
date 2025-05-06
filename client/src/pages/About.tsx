@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ArrowLeft, CheckCircle, MousePointerClick, Keyboard, Clipboard, Edit3, GripHorizontal } from "lucide-react";
+import { ArrowLeft, CheckCircle, MousePointerClick, Keyboard, Clipboard, Edit3, GripHorizontal, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function About() {
@@ -103,6 +103,19 @@ export default function About() {
               <p className="text-muted-foreground">
                 Click and drag tasks to move them between categories or reorder them within a category.
                 Look for the grip handle that appears when you hover over a task.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start">
+            <div className="bg-primary/20 p-2 rounded mr-4">
+              <Repeat className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-lg font-medium mb-1">Repeating Tasks</h3>
+              <p className="text-muted-foreground">
+                Click the arrow button on any task and select "Set up repeating task" to create tasks that automatically recur. 
+                You can set tasks to repeat daily, weekly, monthly, or quarterly, and they'll be recreated at 7:00 AM on their scheduled day.
               </p>
             </div>
           </div>
