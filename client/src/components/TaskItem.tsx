@@ -7,6 +7,7 @@ import { Task, Category } from "@shared/schema";
 import { ChevronUp, ChevronDown, GripVertical, Repeat, Calendar, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDraggable } from "@dnd-kit/core";
+import { useRepeatingTasks } from "@/hooks/use-repeating-tasks";
 import { 
   Popover, 
   PopoverContent, 
@@ -142,17 +143,21 @@ export default function TaskItem({
     setOpen(false);
   };
   
+  // Use our repeating tasks hook
+  const { createRepeatingTask, isCreatingRepeatingTask } = useRepeatingTasks();
+  
   const handleSetupRepeatingTask = () => {
-    // This would be implemented when we add the backend functionality
-    console.log('Setting up repeating task:', {
-      taskId: task.id,
-      text: task.text,
-      repeatType,
-      categoryId: repeatCategoryId,
-      time: '7:00 AM'
-    });
+    if (!repeatCategoryId) {
+      // This should not happen as we have validation, but just in case
+      return;
+    }
     
-    // Show success message or handling here
+    // Create the repeating task using our hook
+    createRepeatingTask({
+      taskText: task.text,
+      repeatType,
+      targetCategoryId: repeatCategoryId
+    });
     
     // Close the dialog
     setIsRepeatDialogOpen(false);
@@ -307,7 +312,7 @@ export default function TaskItem({
                 disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
                 aria-label="Move task to category"
               >
-                <ChevronUp className="h-5 w-5" />
+                <ChevronUp className="h-4 w-4" />
               </button>
             </PopoverTrigger>
             <PopoverContent className="p-0 w-48" align="end" side="top">
@@ -428,11 +433,11 @@ export default function TaskItem({
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRepeatDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsRepeatDialogOpen(false)} disabled={isCreatingRepeatingTask}>
               Cancel
             </Button>
-            <Button onClick={handleSetupRepeatingTask}>
-              Save
+            <Button onClick={handleSetupRepeatingTask} disabled={isCreatingRepeatingTask || !repeatCategoryId}>
+              {isCreatingRepeatingTask ? 'Saving...' : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>

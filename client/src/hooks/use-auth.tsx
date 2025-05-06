@@ -60,14 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Set user data
       queryClient.setQueryData(["/api/user"], user);
       
-      // Archive completed tasks automatically on login
-      try {
-        await apiRequest("POST", "/api/tasks/archive");
-        // Refresh tasks after archiving
-        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      } catch (error) {
-        console.error("Failed to archive tasks on login:", error);
-      }
+      // Note: The backend already processes repeating tasks and archives 
+      // completed tasks on login, but we'll refresh tasks to ensure the UI is up-to-date
+      
+      // Refresh tasks to get the latest data
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       
       toast({
         title: "Login successful",
