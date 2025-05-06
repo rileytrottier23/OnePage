@@ -12,7 +12,7 @@ import {
   type RepeatingTask,
   type InsertRepeatingTask
 } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, lt } from "drizzle-orm";
 import { db } from "./db";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -21,6 +21,7 @@ import { pool } from "./db";
 // Interface for storage operations
 export interface IStorage {
   // User methods
+  getAllUsers(): Promise<User[]>;
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -96,6 +97,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   // User methods
+  async getAllUsers(): Promise<User[]> {
+    return await db
+      .select()
+      .from(users);
+  }
+  
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db
       .select()
@@ -256,6 +263,23 @@ export class DatabaseStorage implements IStorage {
   async updateTask(id: number, updates: Partial<Task>, userId?: number): Promise<Task | undefined> {
     if (!userId) {
       return undefined; // If no userId provided, return undefined for security
+    }
+    
+    // Set completedAt timestamp if task is being marked as completed
+    if (updates.completed === true) {
+      // Get current task status
+      const [currentTask] = await db
+        .select()
+        .from(tasks)
+        .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
+      
+      // Only update completedAt if the task wasn't already completed
+      if (currentTask && !currentTask.completed) {
+        updates.completedAt = new Date();
+      }
+    } else if (updates.completed === false) {
+      // If unmarking a task as completed, clear the completedAt timestamp
+      updates.completedAt = null;
     }
     
     const [updated] = await db

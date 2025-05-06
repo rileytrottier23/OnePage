@@ -6,9 +6,50 @@ import { z } from "zod";
 import { ZodError } from "zod";
 import { setupAuth } from "./auth";
 
+// Function to schedule daily tasks like archiving completed tasks and processing repeating tasks
+function setupScheduledTasks() {
+  const checkAndRunScheduledTasks = async () => {
+    try {
+      console.log("Running scheduled tasks check...");
+      const now = new Date();
+      
+      // Get all users - we'll process tasks for each user
+      const allUsers = await storage.getAllUsers();
+      
+      // Run at 6am for task archiving and 7am for repeating task processing
+      const hour = now.getHours();
+      
+      if (hour === 6) { 
+        console.log("It's 6am - archiving completed tasks");
+        for (const user of allUsers) {
+          await storage.archiveCompletedTasks(user.id);
+        }
+      }
+      
+      if (hour === 7) {
+        console.log("It's 7am - processing repeating tasks");
+        for (const user of allUsers) {
+          await storage.processRepeatingTasks(user.id);
+        }
+      }
+    } catch (error) {
+      console.error("Error in scheduled tasks:", error);
+    }
+  };
+  
+  // Check every hour if it's time to run scheduled tasks
+  setInterval(checkAndRunScheduledTasks, 60 * 60 * 1000); // Every hour
+  
+  // Also run once on startup to handle any missed tasks
+  checkAndRunScheduledTasks();
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication
   setupAuth(app);
+  
+  // Set up scheduled tasks 
+  setupScheduledTasks();
 
   // Error handling middleware
   const handleError = (err: any, res: any) => {
@@ -163,13 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updates = taskSchema.parse(req.body);
       
-      // If marking as completed, set completedAt timestamp
-      if (updates.completed === true) {
-        const completedDate = new Date();
-        await storage.updateTask(id, { ...updates, completedAt: completedDate }, userId);
-        return res.json(await storage.getTask(id, userId));
-      }
-      
+      // Let the storage method handle the completedAt timestamp logic
       const updated = await storage.updateTask(id, updates, userId);
       if (!updated) {
         return res.status(404).json({ message: "Task not found" });
