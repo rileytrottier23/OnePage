@@ -231,7 +231,7 @@ export default function TaskItem({
         </button>
         
         <Checkbox 
-          className="h-5 w-5 rounded border-gray-600 mr-3"
+          className="h-4 w-4 rounded border-gray-600 mr-2" 
           checked={isChecked} 
           onCheckedChange={handleCheckboxChange}
           disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
@@ -258,7 +258,7 @@ export default function TaskItem({
                 disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
                 aria-label="Move task to category"
               >
-                <ChevronDown className="h-5 w-5" />
+                <ChevronDown className="h-4 w-4" />
               </button>
             </PopoverTrigger>
             <PopoverContent className="p-0 w-48" align="end" side="bottom">

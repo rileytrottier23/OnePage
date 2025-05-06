@@ -131,5 +131,12 @@
 
 /* Space between tasks is reduced */
 .tasks-container {
-  @apply space-y-0.5; /* Reduced space between tasks */
+  @apply space-y-1; /* Reduced space between tasks */
+  gap: 0.125rem;
+}
+
+/* Make task text smaller */
+.task-item {
+  @apply text-sm; /* Smaller text for tasks */
+  margin-bottom: 0.125rem;
 }
