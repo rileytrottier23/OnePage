@@ -283,10 +283,16 @@ export class DatabaseStorage implements IStorage {
       return; // If no userId provided, do nothing for security
     }
     
+    // Get today's date at 6am
+    const today = new Date();
+    today.setHours(6, 0, 0, 0);
+    
     const conditions = [
       eq(tasks.completed, true),
       eq(tasks.archived, false),
-      eq(tasks.userId, userId)
+      eq(tasks.userId, userId),
+      // Only archive tasks that were completed before 6am today
+      lt(tasks.completedAt, today)
     ];
     
     await db

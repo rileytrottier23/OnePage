@@ -118,9 +118,6 @@ export function setupAuth(app: Express) {
           // Process repeating tasks on login
           await storage.processRepeatingTasks(user.id);
           
-          // Archive completed tasks on login
-          await storage.archiveCompletedTasks(user.id);
-          
           // Remove password from response
           const { password, ...userWithoutPassword } = user;
           res.status(200).json(userWithoutPassword);

@@ -107,7 +107,11 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
   // Group tasks by their hierarchy
   const organizeTasks = () => {
     // First, organize tasks by parent-child relationship
-    const rootTasks = todayTasks.filter(task => !task.parentTaskId);
+    // Sort by id to maintain consistent order regardless of completion state
+    const rootTasks = todayTasks
+      .filter(task => !task.parentTaskId)
+      .sort((a, b) => a.id - b.id);
+    
     const taskMap = new Map<number, Task[]>();
     
     // Create a map of parent to children
@@ -117,6 +121,11 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
         children.push(task);
         taskMap.set(task.parentTaskId, children);
       }
+    });
+    
+    // Sort children by id in each parent's group
+    taskMap.forEach((children, parentId) => {
+      children.sort((a, b) => a.id - b.id);
     });
 
     // Helper function to render a task and its children
