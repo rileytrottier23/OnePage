@@ -78,7 +78,7 @@
 }
 
 .task-item {
-  @apply py-1.5 px-2 transition-all duration-200 relative; /* Reduced padding for more compact layout */
+  @apply py-0.5 px-2 transition-all duration-200 relative; /* Further reduced padding for more compact layout */
 }
 
 .task-item:hover {
@@ -131,12 +131,12 @@
 
 /* Space between tasks is reduced */
 .tasks-container {
-  @apply space-y-1; /* Reduced space between tasks */
-  gap: 0.125rem;
+  @apply space-y-0; /* Remove space between tasks */
 }
 
-/* Make task text smaller */
+/* Make task text smaller and more compact */
 .task-item {
   @apply text-sm; /* Smaller text for tasks */
-  margin-bottom: 0.125rem;
+  margin-bottom: 0;
+  line-height: 1.3;
 }
