@@ -229,19 +229,19 @@ export default function TaskItem({
       >
         {/* Handle for dragging */}
         <button 
-          className="drag-handle opacity-0 group-hover:opacity-70 mr-1 cursor-grab flex items-center p-1 hover:bg-muted rounded"
+          className="drag-handle opacity-0 group-hover:opacity-70 mr-0.5 cursor-grab flex items-center p-0.5 hover:bg-muted rounded"
           title="Drag to move"
         >
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
+          <GripVertical className="h-3 w-3 text-muted-foreground" />
         </button>
         
         <Checkbox 
-          className="h-4 w-4 rounded border-gray-600 mr-2" 
+          className="h-3.5 w-3.5 rounded border-gray-600 mr-1.5" 
           checked={isChecked} 
           onCheckedChange={handleCheckboxChange}
           disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
         />
-        <span className={cn("flex-grow flex items-center", task.completed && "completed-task")}>
+        <span className={cn("flex-grow flex items-center leading-tight", task.completed && "completed-task")}>
           {task.indentLevel > 0 && (
             <span className="subtask-indicator"></span>
           )}
@@ -249,7 +249,7 @@ export default function TaskItem({
         </span>
         
         {inTodaySection && task.originalCategory && (
-          <span className={cn("text-xs text-muted-foreground mr-3", task.completed && "opacity-50")}>
+          <span className={cn("text-xs text-muted-foreground mr-1.5", task.completed && "opacity-50")}>
             {task.originalCategory}
           </span>
         )}
@@ -258,12 +258,12 @@ export default function TaskItem({
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
               <button 
-                className="text-muted-foreground hover:text-primary"
+                className="text-muted-foreground hover:text-primary p-0.5"
                 onClick={handleMoveTask}
                 disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
                 aria-label="Move task to category"
               >
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-3 w-3" />
               </button>
             </PopoverTrigger>
             <PopoverContent className="p-0 w-48" align="end" side="bottom">
@@ -307,12 +307,12 @@ export default function TaskItem({
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
               <button 
-                className="text-muted-foreground hover:text-primary"
+                className="text-muted-foreground hover:text-primary p-0.5"
                 onClick={handleMoveTask}
                 disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
                 aria-label="Move task to category"
               >
-                <ChevronUp className="h-4 w-4" />
+                <ChevronUp className="h-3 w-3" />
               </button>
             </PopoverTrigger>
             <PopoverContent className="p-0 w-48" align="end" side="top">
