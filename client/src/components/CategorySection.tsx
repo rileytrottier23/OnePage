@@ -19,7 +19,9 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
   const [newSubtaskId, setNewSubtaskId] = useState<number | null>(null);
   const [isEditingCategory, setIsEditingCategory] = useState(false);
   const [categoryName, setCategoryName] = useState(category.name);
+  const [focusNewTask, setFocusNewTask] = useState(false);
   const newSubtaskRef = useRef<HTMLDivElement>(null);
+  const newTaskInputRef = useRef<HTMLInputElement>(null);
   
   // Setup droppable area for drag and drop
   const { setNodeRef } = useDroppable({
@@ -70,8 +72,7 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
     }
   });
 
-  const [focusNewTask, setFocusNewTask] = useState(false);
-  const newTaskInputRef = useRef<HTMLInputElement>(null);
+
 
   const handleAddTask = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && newTaskText.trim() !== "") {

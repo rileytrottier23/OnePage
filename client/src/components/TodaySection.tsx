@@ -18,6 +18,7 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
   const [newTaskText, setNewTaskText] = useState("");
   const [newSubtaskId, setNewSubtaskId] = useState<number | null>(null);
   const newSubtaskRef = useRef<HTMLDivElement>(null);
+  const taskInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const todayTasks = tasks.filter(task => task.inTodaySection);
@@ -33,6 +34,13 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       setNewTaskText("");
+      
+      // Focus the input again to allow continuous task creation
+      setTimeout(() => {
+        if (taskInputRef.current) {
+          taskInputRef.current.focus();
+        }
+      }, 0);
     }
   });
 
@@ -76,6 +84,13 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
         // Single line - create a single task
         addTaskMutation.mutate(newTaskText.trim());
       }
+      
+      // Focus the input again after creating the task to allow continuous typing
+      setTimeout(() => {
+        if (taskInputRef.current) {
+          taskInputRef.current.focus();
+        }
+      }, 0);
     }
   };
 
@@ -164,6 +179,7 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
         
         <div className="mt-3">
           <Input
+            ref={taskInputRef}
             type="text"
             placeholder="Add a task for today..."
             className="add-task-input w-full px-3 py-2 text-foreground"
@@ -180,6 +196,13 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
                 
                 // Clear the input after processing
                 setNewTaskText("");
+                
+                // Re-focus the input
+                setTimeout(() => {
+                  if (taskInputRef.current) {
+                    taskInputRef.current.focus();
+                  }
+                }, 0);
               } else {
                 setNewTaskText(e.target.value);
               }
