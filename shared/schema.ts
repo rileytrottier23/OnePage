@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, time } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -61,3 +61,26 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// Repeating Tasks Schema
+export const repeatingTasks = pgTable("repeating_tasks", {
+  id: serial("id").primaryKey(),
+  taskText: text("task_text").notNull(),
+  repeatType: text("repeat_type").notNull(), // daily, weekly, monthly, quarterly
+  targetCategoryId: integer("target_category_id").references(() => categories.id),
+  creationTime: time("creation_time").notNull().default("07:00:00"),
+  lastCreatedAt: timestamp("last_created_at").notNull().defaultNow(),
+  active: boolean("active").notNull().default(true),
+  userId: integer("user_id").references(() => users.id),
+});
+
+export const insertRepeatingTaskSchema = createInsertSchema(repeatingTasks).pick({
+  taskText: true,
+  repeatType: true,
+  targetCategoryId: true,
+  creationTime: true,
+  userId: true,
+});
+
+export type InsertRepeatingTask = z.infer<typeof insertRepeatingTaskSchema>;
+export type RepeatingTask = typeof repeatingTasks.$inferSelect;

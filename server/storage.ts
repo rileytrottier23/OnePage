@@ -2,12 +2,15 @@ import {
   tasks, 
   categories, 
   users, 
+  repeatingTasks,
   type Task, 
   type InsertTask, 
   type Category, 
   type InsertCategory, 
   type User, 
-  type InsertUser 
+  type InsertUser,
+  type RepeatingTask,
+  type InsertRepeatingTask
 } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { db } from "./db";
