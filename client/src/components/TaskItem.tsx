@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Task, Category } from "@shared/schema";
-import { ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { ChevronUp, ChevronDown, GripVertical, RepeatIcon, Calendar, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDraggable } from "@dnd-kit/core";
 import { 
@@ -12,7 +12,25 @@ import {
   PopoverContent, 
   PopoverTrigger 
 } from "@/components/ui/popover";
-import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandSeparator } from "@/components/ui/command";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 
 interface TaskItemProps {
   task: Task;
@@ -92,6 +110,9 @@ export default function TaskItem({
   });
 
   const [open, setOpen] = useState(false);
+  const [isRepeatDialogOpen, setIsRepeatDialogOpen] = useState(false);
+  const [repeatType, setRepeatType] = useState<'daily' | 'weekly' | 'monthly' | 'quarterly'>('daily');
+  const [repeatCategoryId, setRepeatCategoryId] = useState<number | null>(task.categoryId);
 
   const handleCheckboxChange = (checked: boolean) => {
     setIsChecked(checked);
@@ -114,6 +135,27 @@ export default function TaskItem({
       changeCategoryMutation.mutate(categoryId);
     }
     setOpen(false);
+  };
+  
+  const handleOpenRepeatDialog = () => {
+    setIsRepeatDialogOpen(true);
+    setOpen(false);
+  };
+  
+  const handleSetupRepeatingTask = () => {
+    // This would be implemented when we add the backend functionality
+    console.log('Setting up repeating task:', {
+      taskId: task.id,
+      text: task.text,
+      repeatType,
+      categoryId: repeatCategoryId,
+      time: '7:00 AM'
+    });
+    
+    // Show success message or handling here
+    
+    // Close the dialog
+    setIsRepeatDialogOpen(false);
   };
 
   const indentTaskMutation = useMutation({
@@ -167,122 +209,234 @@ export default function TaskItem({
   } : undefined;
 
   return (
-    <div 
-      ref={setNodeRef}
-      style={dragStyle}
-      className={cn(
-        "task-item flex items-center rounded-md cursor-grab relative",
-        indentClass,
-        updateTaskMutation.isPending && "opacity-70",
-        isDragging && "opacity-50 bg-muted"
-      )}
-      onKeyDown={handleKeyDown}
-      tabIndex={0}
-    >
-      {/* Handle for dragging */}
-      <button 
-        className="drag-handle opacity-0 group-hover:opacity-70 mr-1 cursor-grab flex items-center p-1 hover:bg-muted rounded"
-        title="Drag to move"
-      >
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
-      </button>
-      
-      <Checkbox 
-        className="h-5 w-5 rounded border-gray-600 mr-3"
-        checked={isChecked} 
-        onCheckedChange={handleCheckboxChange}
-        disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
-      />
-      <span className={cn("flex-grow flex items-center", task.completed && "completed-task")}>
-        {task.indentLevel > 0 && (
-          <span className="subtask-indicator"></span>
+    <>
+      <div 
+        ref={setNodeRef}
+        style={dragStyle}
+        className={cn(
+          "task-item flex items-center rounded-md cursor-grab relative",
+          indentClass,
+          updateTaskMutation.isPending && "opacity-70",
+          isDragging && "opacity-50 bg-muted"
         )}
-        {task.text}
-      </span>
-      
-      {inTodaySection && task.originalCategory && (
-        <span className={cn("text-xs text-muted-foreground mr-3", task.completed && "opacity-50")}>
-          {task.originalCategory}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+      >
+        {/* Handle for dragging */}
+        <button 
+          className="drag-handle opacity-0 group-hover:opacity-70 mr-1 cursor-grab flex items-center p-1 hover:bg-muted rounded"
+          title="Drag to move"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </button>
+        
+        <Checkbox 
+          className="h-5 w-5 rounded border-gray-600 mr-3"
+          checked={isChecked} 
+          onCheckedChange={handleCheckboxChange}
+          disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
+        />
+        <span className={cn("flex-grow flex items-center", task.completed && "completed-task")}>
+          {task.indentLevel > 0 && (
+            <span className="subtask-indicator"></span>
+          )}
+          {task.text}
         </span>
-      )}
-      
-      {inTodaySection ? (
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <button 
-              className="text-muted-foreground hover:text-primary"
-              onClick={handleMoveTask}
-              disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
-              aria-label="Move task to category"
-            >
-              <ChevronDown className="h-5 w-5" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="p-0 w-48" align="end" side="bottom">
-            <Command>
-              <CommandInput placeholder="Search categories..." />
-              <CommandEmpty>No categories found</CommandEmpty>
-              <CommandGroup heading="Move to">
-                {task.originalCategory && (
+        
+        {inTodaySection && task.originalCategory && (
+          <span className={cn("text-xs text-muted-foreground mr-3", task.completed && "opacity-50")}>
+            {task.originalCategory}
+          </span>
+        )}
+        
+        {inTodaySection ? (
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <button 
+                className="text-muted-foreground hover:text-primary"
+                onClick={handleMoveTask}
+                disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
+                aria-label="Move task to category"
+              >
+                <ChevronDown className="h-5 w-5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-48" align="end" side="bottom">
+              <Command>
+                <CommandInput placeholder="Search categories..." />
+                <CommandEmpty>No categories found</CommandEmpty>
+                <CommandGroup heading="Move to">
+                  {task.originalCategory && (
+                    <CommandItem 
+                      onSelect={() => moveTaskMutation.mutate(false)}
+                      className="font-medium"
+                    >
+                      {`Back to ${task.originalCategory}`}
+                    </CommandItem>
+                  )}
+                  {categories.map((category) => (
+                    <CommandItem
+                      key={category.id}
+                      onSelect={() => handleSelectCategory(category.id)}
+                      disabled={category.id === task.categoryId}
+                      className={category.id === task.categoryId ? "opacity-50" : ""}
+                    >
+                      {category.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+                <CommandSeparator />
+                <CommandGroup heading="Repeating">
+                  <CommandItem
+                    onSelect={handleOpenRepeatDialog}
+                    className="text-primary"
+                  >
+                    <RepeatIcon className="mr-2 h-4 w-4" />
+                    Set up repeating task
+                  </CommandItem>
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <button 
+                className="text-muted-foreground hover:text-primary"
+                onClick={handleMoveTask}
+                disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
+                aria-label="Move task to category"
+              >
+                <ChevronUp className="h-5 w-5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-48" align="end" side="top">
+              <Command>
+                <CommandInput placeholder="Search categories..." />
+                <CommandEmpty>No categories found</CommandEmpty>
+                <CommandGroup heading="Move to">
                   <CommandItem 
-                    onSelect={() => moveTaskMutation.mutate(false)}
-                    className="font-medium"
+                    onSelect={() => task.categoryId !== null ? handleSelectCategory(task.categoryId) : null}
+                    className="text-primary hover:bg-primary/10"
                   >
-                    {`Back to ${task.originalCategory}`}
+                    Today
                   </CommandItem>
-                )}
-                {categories.map((category) => (
+                  {categories.map((category) => (
+                    <CommandItem
+                      key={category.id}
+                      onSelect={() => handleSelectCategory(category.id)}
+                      disabled={category.id === task.categoryId && !task.inTodaySection}
+                      className={category.id === task.categoryId && !task.inTodaySection ? "opacity-50" : ""}
+                    >
+                      {category.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+                <CommandSeparator />
+                <CommandGroup heading="Repeating">
                   <CommandItem
-                    key={category.id}
-                    onSelect={() => handleSelectCategory(category.id)}
-                    disabled={category.id === task.categoryId}
-                    className={category.id === task.categoryId ? "opacity-50" : ""}
+                    onSelect={handleOpenRepeatDialog}
+                    className="text-primary"
                   >
-                    {category.name}
+                    <RepeatIcon className="mr-2 h-4 w-4" />
+                    Set up repeating task
                   </CommandItem>
-                ))}
-              </CommandGroup>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      ) : (
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <button 
-              className="text-muted-foreground hover:text-primary"
-              onClick={handleMoveTask}
-              disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
-              aria-label="Move task to category"
-            >
-              <ChevronUp className="h-5 w-5" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="p-0 w-48" align="end" side="top">
-            <Command>
-              <CommandInput placeholder="Search categories..." />
-              <CommandEmpty>No categories found</CommandEmpty>
-              <CommandGroup heading="Move to">
-                <CommandItem 
-                  onSelect={() => task.categoryId !== null ? handleSelectCategory(task.categoryId) : null}
-                  className="text-primary hover:bg-primary/10"
-                >
-                  Today
-                </CommandItem>
-                {categories.map((category) => (
-                  <CommandItem
-                    key={category.id}
-                    onSelect={() => handleSelectCategory(category.id)}
-                    disabled={category.id === task.categoryId && !task.inTodaySection}
-                    className={category.id === task.categoryId && !task.inTodaySection ? "opacity-50" : ""}
-                  >
-                    {category.name}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      )}
-    </div>
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        )}
+      </div>
+
+      {/* Dialog for setting up repeating task */}
+      <Dialog open={isRepeatDialogOpen} onOpenChange={setIsRepeatDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Set Up Repeating Task</DialogTitle>
+            <DialogDescription>
+              Select how often this task should repeat and in which category it should appear.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Task</h4>
+              <div className="bg-secondary/30 p-2 rounded-md text-sm">
+                {task.text}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Repeat Schedule</h4>
+              <RadioGroup value={repeatType} onValueChange={(value) => setRepeatType(value as any)} className="grid grid-cols-2 gap-2">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="daily" id="daily" />
+                  <Label htmlFor="daily" className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Daily
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="weekly" id="weekly" />
+                  <Label htmlFor="weekly" className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Weekly
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="monthly" id="monthly" />
+                  <Label htmlFor="monthly" className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Monthly
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="quarterly" id="quarterly" />
+                  <Label htmlFor="quarterly" className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Quarterly
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Target Category</h4>
+              <Select value={repeatCategoryId?.toString() || ''} onValueChange={(value) => setRepeatCategoryId(Number(value))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id.toString()}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                <h4 className="font-medium text-sm">Creation Time</h4>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Task will be recreated at 7:00 AM on the scheduled day.
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRepeatDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSetupRepeatingTask}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
