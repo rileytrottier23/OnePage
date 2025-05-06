@@ -40,6 +40,14 @@ export interface IStorage {
   deleteTask(id: number, userId?: number): Promise<boolean>;
   archiveCompletedTasks(userId?: number): Promise<void>;
   
+  // Repeating task methods
+  getAllRepeatingTasks(userId?: number): Promise<RepeatingTask[]>;
+  getRepeatingTask(id: number, userId?: number): Promise<RepeatingTask | undefined>;
+  createRepeatingTask(task: InsertRepeatingTask): Promise<RepeatingTask>;
+  updateRepeatingTask(id: number, updates: Partial<RepeatingTask>, userId?: number): Promise<RepeatingTask | undefined>;
+  deleteRepeatingTask(id: number, userId?: number): Promise<boolean>;
+  processRepeatingTasks(userId?: number): Promise<void>;
+  
   // Default categories
   initializeDefaultCategories(userId?: number): Promise<void>;
   
@@ -285,6 +293,135 @@ export class DatabaseStorage implements IStorage {
       .update(tasks)
       .set({ archived: true })
       .where(and(...conditions));
+  }
+  
+  // Repeating task methods
+  async getAllRepeatingTasks(userId?: number): Promise<RepeatingTask[]> {
+    if (!userId) {
+      return []; // If no userId provided, return empty array for security
+    }
+    
+    return await db
+      .select()
+      .from(repeatingTasks)
+      .where(eq(repeatingTasks.userId, userId));
+  }
+  
+  async getRepeatingTask(id: number, userId?: number): Promise<RepeatingTask | undefined> {
+    if (!userId) {
+      return undefined; // If no userId provided, return undefined for security
+    }
+    
+    const [repeatingTask] = await db
+      .select()
+      .from(repeatingTasks)
+      .where(and(eq(repeatingTasks.id, id), eq(repeatingTasks.userId, userId)));
+    return repeatingTask;
+  }
+  
+  async createRepeatingTask(insertRepeatingTask: InsertRepeatingTask): Promise<RepeatingTask> {
+    // Ensure userId is provided for security
+    if (!insertRepeatingTask.userId) {
+      throw new Error("User ID is required to create a repeating task");
+    }
+    
+    const now = new Date();
+    
+    const repeatingTaskData = {
+      ...insertRepeatingTask,
+      lastCreatedAt: now,
+      active: true
+    };
+    
+    const [repeatingTask] = await db
+      .insert(repeatingTasks)
+      .values(repeatingTaskData)
+      .returning();
+    return repeatingTask;
+  }
+  
+  async updateRepeatingTask(id: number, updates: Partial<RepeatingTask>, userId?: number): Promise<RepeatingTask | undefined> {
+    if (!userId) {
+      return undefined; // If no userId provided, return undefined for security
+    }
+    
+    const [updated] = await db
+      .update(repeatingTasks)
+      .set(updates)
+      .where(and(eq(repeatingTasks.id, id), eq(repeatingTasks.userId, userId)))
+      .returning();
+    return updated;
+  }
+  
+  async deleteRepeatingTask(id: number, userId?: number): Promise<boolean> {
+    if (!userId) {
+      return false; // If no userId provided, return false for security
+    }
+    
+    await db
+      .delete(repeatingTasks)
+      .where(and(eq(repeatingTasks.id, id), eq(repeatingTasks.userId, userId)));
+    
+    return true; // PostgreSQL doesn't return count, but operation succeeded if no error
+  }
+  
+  async processRepeatingTasks(userId?: number): Promise<void> {
+    if (!userId) {
+      return; // If no userId provided, do nothing for security
+    }
+    
+    // Get all active repeating tasks for this user
+    const allRepeatingTasks = await this.getAllRepeatingTasks(userId);
+    const activeTasks = allRepeatingTasks.filter(task => task.active);
+    
+    const now = new Date();
+    
+    for (const repeatingTask of activeTasks) {
+      // Parse last created date
+      const lastCreatedAt = new Date(repeatingTask.lastCreatedAt);
+      
+      // Determine if we need to create a new task
+      let shouldCreateTask = false;
+      
+      switch (repeatingTask.repeatType) {
+        case 'daily':
+          // Check if it's been at least a day since the last task was created
+          const oneDayMs = 24 * 60 * 60 * 1000;
+          shouldCreateTask = now.getTime() - lastCreatedAt.getTime() >= oneDayMs;
+          break;
+          
+        case 'weekly':
+          // Check if it's been at least a week since the last task was created
+          const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+          shouldCreateTask = now.getTime() - lastCreatedAt.getTime() >= oneWeekMs;
+          break;
+          
+        case 'monthly':
+          // Check if it's been at least a month (approximated to 30 days) since the last task was created
+          const oneMonthMs = 30 * 24 * 60 * 60 * 1000;
+          shouldCreateTask = now.getTime() - lastCreatedAt.getTime() >= oneMonthMs;
+          break;
+          
+        case 'quarterly':
+          // Check if it's been at least 3 months (approximated to 90 days) since the last task was created
+          const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+          shouldCreateTask = now.getTime() - lastCreatedAt.getTime() >= threeMonthsMs;
+          break;
+      }
+      
+      if (shouldCreateTask) {
+        // Create a new task
+        await this.createTask({
+          text: repeatingTask.taskText,
+          categoryId: repeatingTask.targetCategoryId,
+          inTodaySection: false,
+          userId
+        });
+        
+        // Update the last created timestamp
+        await this.updateRepeatingTask(repeatingTask.id, { lastCreatedAt: now }, userId);
+      }
+    }
   }
 }
 

@@ -107,16 +107,29 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: SelectUser | false, info: any) => {
+    passport.authenticate("local", async (err: any, user: SelectUser | false, info: any) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ error: "Invalid credentials" });
       
-      req.login(user, (err) => {
+      req.login(user, async (err) => {
         if (err) return next(err);
         
-        // Remove password from response
-        const { password, ...userWithoutPassword } = user;
-        res.status(200).json(userWithoutPassword);
+        try {
+          // Process repeating tasks on login
+          await storage.processRepeatingTasks(user.id);
+          
+          // Archive completed tasks on login
+          await storage.archiveCompletedTasks(user.id);
+          
+          // Remove password from response
+          const { password, ...userWithoutPassword } = user;
+          res.status(200).json(userWithoutPassword);
+        } catch (error) {
+          console.error("Error during post-login processing:", error);
+          // Still return the user even if post-login processing fails
+          const { password, ...userWithoutPassword } = user;
+          res.status(200).json(userWithoutPassword);
+        }
       });
     })(req, res, next);
   });

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCategorySchema, insertTaskSchema } from "@shared/schema";
+import { insertCategorySchema, insertTaskSchema, insertRepeatingTaskSchema } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
 import { setupAuth } from "./auth";
@@ -331,6 +331,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }, userId);
       
       res.json(updated);
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
+  // Repeating Tasks endpoints
+  app.get("/api/repeating-tasks", ensureAuth, async (req: any, res: any) => {
+    try {
+      const userId = req.user?.id;
+      const repeatingTasks = await storage.getAllRepeatingTasks(userId);
+      res.json(repeatingTasks);
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
+  app.post("/api/repeating-tasks", ensureAuth, async (req: any, res: any) => {
+    try {
+      const userId = req.user?.id;
+      const data = insertRepeatingTaskSchema.parse({
+        ...req.body,
+        userId
+      });
+      
+      const repeatingTask = await storage.createRepeatingTask(data);
+      res.status(201).json(repeatingTask);
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
+  app.patch("/api/repeating-tasks/:id", ensureAuth, async (req: any, res: any) => {
+    try {
+      const userId = req.user?.id;
+      const id = parseInt(req.params.id);
+      
+      const repeatingTaskSchema = z.object({
+        taskText: z.string().optional(),
+        repeatType: z.enum(['daily', 'weekly', 'monthly', 'quarterly']).optional(),
+        targetCategoryId: z.number().optional(),
+        active: z.boolean().optional(),
+      });
+      
+      // First check if this repeating task belongs to the user
+      const repeatingTask = await storage.getRepeatingTask(id, userId);
+      if (!repeatingTask) {
+        return res.status(404).json({ message: "Repeating task not found" });
+      }
+      
+      const updates = repeatingTaskSchema.parse(req.body);
+      const updated = await storage.updateRepeatingTask(id, updates, userId);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Repeating task not found" });
+      }
+      
+      res.json(updated);
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
+  app.delete("/api/repeating-tasks/:id", ensureAuth, async (req: any, res: any) => {
+    try {
+      const userId = req.user?.id;
+      const id = parseInt(req.params.id);
+      
+      // Check if task exists and belongs to user
+      const repeatingTask = await storage.getRepeatingTask(id, userId);
+      if (!repeatingTask) {
+        return res.status(404).json({ message: "Repeating task not found" });
+      }
+      
+      const success = await storage.deleteRepeatingTask(id, userId);
+      if (success) {
+        res.json({ message: "Repeating task deleted successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to delete repeating task" });
+      }
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
+  // Process repeating tasks - typically called on login or at regular intervals
+  app.post("/api/repeating-tasks/process", ensureAuth, async (req: any, res: any) => {
+    try {
+      const userId = req.user?.id;
+      await storage.processRepeatingTasks(userId);
+      res.json({ message: "Repeating tasks processed successfully" });
     } catch (err) {
       handleError(err, res);
     }
