@@ -6,6 +6,9 @@ import { Task } from "@shared/schema";
 import TaskItem from "./TaskItem";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Archive, CheckCheck } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface TodaySectionProps {
   tasks: Task[];
@@ -15,8 +18,10 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
   const [newTaskText, setNewTaskText] = useState("");
   const [newSubtaskId, setNewSubtaskId] = useState<number | null>(null);
   const newSubtaskRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const todayTasks = tasks.filter(task => task.inTodaySection);
+  const completedTasksCount = tasks.filter(task => task.completed && !task.archived).length;
   
   const addTaskMutation = useMutation({
     mutationFn: (text: string) => {
@@ -39,6 +44,21 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       setNewSubtaskId(null);
+    }
+  });
+  
+  // Archive completed tasks mutation
+  const archiveCompletedTasksMutation = useMutation({
+    mutationFn: () => {
+      return apiRequest("POST", "/api/tasks/archive")
+        .then(res => res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Tasks archived",
+        description: "All completed tasks have been archived successfully.",
+      });
     }
   });
 
@@ -118,6 +138,25 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
             {todayTasks.length}
           </Badge>
         </h2>
+        
+        {completedTasksCount > 0 && (
+          <Button 
+            size="sm"
+            variant="outline"
+            className="text-xs flex items-center gap-1"
+            onClick={() => archiveCompletedTasksMutation.mutate()}
+            disabled={archiveCompletedTasksMutation.isPending}
+          >
+            {archiveCompletedTasksMutation.isPending ? (
+              <span>Archiving...</span>
+            ) : (
+              <>
+                <CheckCheck className="h-3 w-3" />
+                <span>Archive {completedTasksCount} completed {completedTasksCount === 1 ? 'task' : 'tasks'}</span>
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       <div className="tasks-container">

@@ -54,11 +54,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiRequest("POST", "/api/login", credentials);
       return await res.json();
     },
-    onSuccess: (user) => {
+    onSuccess: async (user) => {
       // Clear all query cache to prevent data leakage between users
       queryClient.clear();
       // Set user data
       queryClient.setQueryData(["/api/user"], user);
+      
+      // Archive completed tasks automatically on login
+      try {
+        await apiRequest("POST", "/api/tasks/archive");
+        // Refresh tasks after archiving
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      } catch (error) {
+        console.error("Failed to archive tasks on login:", error);
+      }
+      
       toast({
         title: "Login successful",
         description: `Welcome back, ${user.username}!`,
