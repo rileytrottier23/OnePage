@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Task, Category } from "@shared/schema";
-import { ChevronUp, ChevronDown, GripVertical, RepeatIcon, Calendar, Clock } from "lucide-react";
+import { ChevronUp, ChevronDown, GripVertical, Repeat, Calendar, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDraggable } from "@dnd-kit/core";
 import { 
@@ -291,7 +291,7 @@ export default function TaskItem({
                     onSelect={handleOpenRepeatDialog}
                     className="text-primary"
                   >
-                    <RepeatIcon className="mr-2 h-4 w-4" />
+                    <Repeat className="mr-2 h-4 w-4" />
                     Set up repeating task
                   </CommandItem>
                 </CommandGroup>
@@ -338,7 +338,7 @@ export default function TaskItem({
                     onSelect={handleOpenRepeatDialog}
                     className="text-primary"
                   >
-                    <RepeatIcon className="mr-2 h-4 w-4" />
+                    <Repeat className="mr-2 h-4 w-4" />
                     Set up repeating task
                   </CommandItem>
                 </CommandGroup>
