@@ -19,7 +19,6 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
   const [newSubtaskId, setNewSubtaskId] = useState<number | null>(null);
   const [isEditingCategory, setIsEditingCategory] = useState(false);
   const [categoryName, setCategoryName] = useState(category.name);
-  const [focusNewTask, setFocusNewTask] = useState(false);
   const newSubtaskRef = useRef<HTMLDivElement>(null);
   const newTaskInputRef = useRef<HTMLInputElement>(null);
   
@@ -46,6 +45,13 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       setNewTaskText("");
+      
+      // Focus the input again to allow continuous task creation
+      setTimeout(() => {
+        if (newTaskInputRef.current) {
+          newTaskInputRef.current.focus();
+        }
+      }, 0);
     }
   });
 
@@ -87,9 +93,6 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
       } else {
         // Single line - create a single task
         addTaskMutation.mutate(newTaskText.trim());
-        
-        // Set focus flag to focus on the input field after mutation completes
-        setFocusNewTask(true);
       }
     } else if (e.key === "Tab") {
       // Prevent default Tab behavior
@@ -98,20 +101,9 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
       // If there's text in the input and we press Tab, create an indented task
       if (newTaskText.trim() !== "") {
         addTaskMutation.mutate(newTaskText.trim());
-        
-        // We'll handle indentation after task creation in useEffect
-        setFocusNewTask(true);
       }
     }
   };
-  
-  // Use effect to handle focusing the input field after task creation
-  useEffect(() => {
-    if (focusNewTask && !addTaskMutation.isPending && newTaskInputRef.current) {
-      newTaskInputRef.current.focus();
-      setFocusNewTask(false);
-    }
-  }, [focusNewTask, addTaskMutation.isPending]);
 
   const handleCreateSubtask = (parentId: number) => {
     setNewSubtaskId(parentId);
@@ -243,6 +235,13 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
                 
                 // Clear the input after processing
                 setNewTaskText("");
+                
+                // Re-focus the input
+                setTimeout(() => {
+                  if (newTaskInputRef.current) {
+                    newTaskInputRef.current.focus();
+                  }
+                }, 0);
               } else {
                 setNewTaskText(e.target.value);
               }
