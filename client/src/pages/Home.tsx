@@ -7,7 +7,7 @@ import TodaySection from "@/components/TodaySection";
 import CategorySection from "@/components/CategorySection";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, Settings, Archive as ArchiveIcon } from "lucide-react";
+import { PlusIcon, Settings, Archive as ArchiveIcon, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +42,17 @@ export default function Home() {
   const moveTaskMutation = useMutation({
     mutationFn: ({ taskId, categoryId }: { taskId: number, categoryId: number }) => {
       return apiRequest("PATCH", `/api/tasks/${taskId}/category`, { categoryId })
+        .then(res => res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    }
+  });
+  
+  // Archive completed tasks
+  const archiveCompletedTasksMutation = useMutation({
+    mutationFn: () => {
+      return apiRequest("POST", `/api/tasks/archive`)
         .then(res => res.json());
     },
     onSuccess: () => {
