@@ -46,6 +46,8 @@ export default function RepeatingTasksTable() {
     isLoadingRepeatingTasks,
     updateRepeatingTask,
     deleteRepeatingTask,
+    isUpdatingRepeatingTask,
+    isDeletingRepeatingTask,
   } = useRepeatingTasks();
   
   const [selectedTask, setSelectedTask] = useState<RepeatingTask | null>(null);
@@ -57,7 +59,7 @@ export default function RepeatingTasksTable() {
   const handleOpenEditDialog = (task: RepeatingTask) => {
     setSelectedTask(task);
     setRepeatType(task.repeatType as any);
-    setTargetCategoryId(task.categoryId);
+    setTargetCategoryId(task.targetCategoryId);
     setIsEditDialogOpen(true);
   };
   
@@ -69,10 +71,10 @@ export default function RepeatingTasksTable() {
   const handleSaveEdit = () => {
     if (!selectedTask || !targetCategoryId) return;
     
-    updateRepeatingTask.mutate({
+    updateRepeatingTask({
       id: selectedTask.id,
       repeatType,
-      categoryId: targetCategoryId
+      targetCategoryId: targetCategoryId
     });
     
     setIsEditDialogOpen(false);
@@ -81,7 +83,7 @@ export default function RepeatingTasksTable() {
   const handleDelete = () => {
     if (!selectedTask) return;
     
-    deleteRepeatingTask.mutate(selectedTask.id);
+    deleteRepeatingTask(selectedTask.id);
     setIsDeleteDialogOpen(false);
   };
   
@@ -125,11 +127,11 @@ export default function RepeatingTasksTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {repeatingTasks.map((task) => (
+          {repeatingTasks.map((task: RepeatingTask) => (
             <TableRow key={task.id}>
               <TableCell className="font-medium">{task.taskText}</TableCell>
               <TableCell>{getRepeatTypeLabel(task.repeatType)}</TableCell>
-              <TableCell>{getCategoryName(task.categoryId)}</TableCell>
+              <TableCell>{getCategoryName(task.targetCategoryId)}</TableCell>
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -234,15 +236,15 @@ export default function RepeatingTasksTable() {
             <Button 
               variant="outline" 
               onClick={() => setIsEditDialogOpen(false)} 
-              disabled={updateRepeatingTask.isPending}
+              disabled={isUpdatingRepeatingTask}
             >
               Cancel
             </Button>
             <Button 
               onClick={handleSaveEdit} 
-              disabled={updateRepeatingTask.isPending || !targetCategoryId}
+              disabled={isUpdatingRepeatingTask || !targetCategoryId}
             >
-              {updateRepeatingTask.isPending ? 'Saving...' : 'Save Changes'}
+              {isUpdatingRepeatingTask ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -268,16 +270,16 @@ export default function RepeatingTasksTable() {
             <Button 
               variant="outline" 
               onClick={() => setIsDeleteDialogOpen(false)} 
-              disabled={deleteRepeatingTask.isPending}
+              disabled={isDeletingRepeatingTask}
             >
               Cancel
             </Button>
             <Button 
               variant="destructive"
               onClick={handleDelete} 
-              disabled={deleteRepeatingTask.isPending}
+              disabled={isDeletingRepeatingTask}
             >
-              {deleteRepeatingTask.isPending ? 'Deleting...' : 'Delete'}
+              {isDeletingRepeatingTask ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
