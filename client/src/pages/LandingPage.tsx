@@ -157,6 +157,46 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Screenshots section */}
+      <section className="py-16 bg-muted/20">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-8">See OnePage in action</h2>
+          <p className="text-xl text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+            A clean, focused interface that helps you stay organized without the clutter
+          </p>
+          
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <div className="bg-background p-4 rounded-lg shadow-sm border border-border/50">
+              <div className="aspect-video relative overflow-hidden rounded-md border border-border/50">
+                <img 
+                  src="/images/task-list-screenshot.svg" 
+                  alt="OnePage task list interface showing categories and tasks" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <h3 className="text-xl font-semibold mt-4 mb-2">Everything at a glance</h3>
+              <p className="text-muted-foreground">
+                See all your tasks organized by category, with the most important items always visible in the Today section.
+              </p>
+            </div>
+            
+            <div className="bg-background p-4 rounded-lg shadow-sm border border-border/50">
+              <div className="aspect-video relative overflow-hidden rounded-md border border-border/50">
+                <img 
+                  src="/images/recurring-task-screenshot.svg" 
+                  alt="Setting up a repeating task in OnePage" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <h3 className="text-xl font-semibold mt-4 mb-2">Simple repeating tasks</h3>
+              <p className="text-muted-foreground">
+                Set up tasks to repeat automatically on a daily, weekly, monthly, or quarterly basis so you never miss your recurring responsibilities.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA section */}
       <section className="py-16 bg-primary/5">
         <div className="container mx-auto px-4 text-center">

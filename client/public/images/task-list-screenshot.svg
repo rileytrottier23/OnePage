@@ -1,0 +1,101 @@
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark mode background -->
+  <rect width="800" height="600" fill="#121212" rx="8" ry="8"/>
+  
+  <!-- App Header -->
+  <g transform="translate(20, 20)">
+    <rect width="760" height="50" fill="#1a1a1a" rx="4" ry="4"/>
+    <g transform="translate(15, 15)">
+      <path d="M14 10l-2 2m0 0l-2-2m2 2l2-2m-2 2l-2 2" stroke="#E879F9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M20 12l-6-6m0 0l-6 6" stroke="#E879F9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="35" y="10" font-family="Arial" font-size="20" fill="#E879F9" font-weight="bold">OnePage</text>
+      <text x="150" y="10" font-family="Arial" font-size="12" fill="#888">Task Management</text>
+    </g>
+    <g transform="translate(600, 15)">
+      <rect width="30" height="30" fill="#1f1f1f" rx="15" ry="15"/>
+      <text x="15" y="22" font-family="Arial" font-size="14" fill="#E879F9" font-weight="bold" text-anchor="middle">RT</text>
+    </g>
+  </g>
+  
+  <!-- Today Section -->
+  <g transform="translate(20, 90)">
+    <text x="0" y="20" font-family="Arial" font-size="18" fill="#E879F9" font-weight="bold">Today</text>
+    <rect width="760" height="150" fill="#1a1a1a" rx="4" ry="4" y="30"/>
+    
+    <!-- Tasks in Today section -->
+    <g transform="translate(15, 50)">
+      <!-- Task 1 -->
+      <rect width="730" height="30" fill="#1f1f1f" rx="4" ry="4"/>
+      <circle cx="15" cy="15" r="8" stroke="#E879F9" stroke-width="1.5" fill="none"/>
+      <text x="35" y="20" font-family="Arial" font-size="14" fill="#fff">Prepare presentation slides for the meeting</text>
+      <text x="670" y="20" font-family="Arial" font-size="12" fill="#888">Work</text>
+    </g>
+    
+    <g transform="translate(15, 90)">
+      <!-- Task 2 -->
+      <rect width="730" height="30" fill="#1f1f1f" rx="4" ry="4"/>
+      <circle cx="15" cy="15" r="8" stroke="#E879F9" stroke-width="1.5" fill="none"/>
+      <text x="35" y="20" font-family="Arial" font-size="14" fill="#fff">Call dentist to schedule appointment</text>
+      <text x="670" y="20" font-family="Arial" font-size="12" fill="#888">Personal</text>
+    </g>
+    
+    <g transform="translate(15, 130)">
+      <!-- Task 3 -->
+      <rect width="730" height="30" fill="#1f1f1f" rx="4" ry="4"/>
+      <circle cx="15" cy="15" r="8" stroke="#E879F9" stroke-width="1.5" fill="none"/>
+      <path d="M10,15 L14,19 L20,11" stroke="#E879F9" stroke-width="1.5" fill="none"/>
+      <text x="35" y="20" font-family="Arial" font-size="14" fill="#888" text-decoration="line-through">Buy groceries for dinner</text>
+      <text x="670" y="20" font-family="Arial" font-size="12" fill="#888">Shopping</text>
+    </g>
+  </g>
+  
+  <!-- Work Category -->
+  <g transform="translate(20, 260)">
+    <text x="0" y="20" font-family="Arial" font-size="18" fill="#E879F9" font-weight="bold">Work</text>
+    <rect width="760" height="150" fill="#1a1a1a" rx="4" ry="4" y="30"/>
+    
+    <!-- Tasks in Work category -->
+    <g transform="translate(15, 50)">
+      <!-- Task 1 -->
+      <rect width="730" height="30" fill="#1f1f1f" rx="4" ry="4"/>
+      <circle cx="15" cy="15" r="8" stroke="#E879F9" stroke-width="1.5" fill="none"/>
+      <text x="35" y="20" font-family="Arial" font-size="14" fill="#fff">Prepare presentation slides for the meeting</text>
+    </g>
+    
+    <g transform="translate(35, 90)">
+      <!-- Subtask 1 -->
+      <rect width="710" height="30" fill="#1f1f1f" rx="4" ry="4"/>
+      <circle cx="15" cy="15" r="8" stroke="#E879F9" stroke-width="1.5" fill="none"/>
+      <text x="35" y="20" font-family="Arial" font-size="14" fill="#fff">Research competitor data</text>
+    </g>
+    
+    <g transform="translate(15, 130)">
+      <!-- Task 2 -->
+      <rect width="730" height="30" fill="#1f1f1f" rx="4" ry="4"/>
+      <circle cx="15" cy="15" r="8" stroke="#E879F9" stroke-width="1.5" fill="none"/>
+      <text x="35" y="20" font-family="Arial" font-size="14" fill="#fff">Draft quarterly report</text>
+    </g>
+  </g>
+  
+  <!-- Personal Category -->
+  <g transform="translate(20, 430)">
+    <text x="0" y="20" font-family="Arial" font-size="18" fill="#E879F9" font-weight="bold">Personal</text>
+    <rect width="760" height="110" fill="#1a1a1a" rx="4" ry="4" y="30"/>
+    
+    <!-- Tasks in Personal category -->
+    <g transform="translate(15, 50)">
+      <!-- Task 1 -->
+      <rect width="730" height="30" fill="#1f1f1f" rx="4" ry="4"/>
+      <circle cx="15" cy="15" r="8" stroke="#E879F9" stroke-width="1.5" fill="none"/>
+      <text x="35" y="20" font-family="Arial" font-size="14" fill="#fff">Call dentist to schedule appointment</text>
+    </g>
+    
+    <g transform="translate(15, 90)">
+      <!-- Task 2 -->
+      <rect width="730" height="30" fill="#1f1f1f" rx="4" ry="4"/>
+      <circle cx="15" cy="15" r="8" stroke="#E879F9" stroke-width="1.5" fill="none"/>
+      <path d="M10,15 L14,19 L20,11" stroke="#E879F9" stroke-width="1.5" fill="none"/>
+      <text x="35" y="20" font-family="Arial" font-size="14" fill="#888" text-decoration="line-through">Pay electricity bill</text>
+    </g>
+  </g>
+</svg>
