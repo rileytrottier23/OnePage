@@ -1,18 +1,33 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Archive, CheckCheck, LogOut, Mail, Menu, Repeat, Settings, User } from "lucide-react";
+import { Archive, CheckCheck, ChevronLeft, ChevronRight, LogOut, Mail, Menu, Repeat, Settings, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function Header() {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    // Check localStorage for saved preference, default to false (expanded)
+    const savedState = localStorage.getItem("sidebar-collapsed");
+    return savedState ? JSON.parse(savedState) : false;
+  });
+  
+  // Save sidebar state to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem("sidebar-collapsed", JSON.stringify(isSidebarCollapsed));
+  }, [isSidebarCollapsed]);
+  
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(prev => !prev);
+  };
   
   const showArchiveLink = location === '/dashboard' || location === '/archive';
   
@@ -133,85 +148,170 @@ export default function Header() {
       </Sheet>
       
       {/* Desktop side menu - hidden on mobile */}
-      <div className="hidden md:flex fixed left-0 top-0 h-screen w-[240px] border-r border-border bg-background z-40 flex-col p-4">
-        <div className="mb-8 mt-4"></div>
+      <div 
+        className={cn(
+          "hidden md:flex fixed left-0 top-0 h-screen border-r border-border bg-background z-40 flex-col p-4 transition-all duration-300",
+          isSidebarCollapsed ? "w-[70px]" : "w-[240px]"
+        )}
+      >
+        <div className="flex justify-end mb-6 mt-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8" 
+                  onClick={toggleSidebar}
+                >
+                  {isSidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         
         <div className="space-y-4">
-          <Link href="/dashboard" className={cn(
-            "flex items-center py-2 px-3 rounded-md transition-colors",
-            location === '/dashboard' ? "bg-primary/10 text-primary" : "hover:bg-muted"
-          )}>
-            <CheckCheck className="h-5 w-5 mr-3" />
-            <span>Tasks</span>
-          </Link>
-
-          {showArchiveLink && (
-            <Link href="/archive" className={cn(
+          <TooltipProvider>
+            <Link href="/dashboard" className={cn(
               "flex items-center py-2 px-3 rounded-md transition-colors",
-              location === '/archive' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+              location === '/dashboard' ? "bg-primary/10 text-primary" : "hover:bg-muted"
             )}>
-              <Archive className="h-5 w-5 mr-3" />
-              <span>Archive</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={isSidebarCollapsed ? "mx-auto" : "mr-3"}>
+                    <CheckCheck className="h-5 w-5" />
+                  </div>
+                </TooltipTrigger>
+                {isSidebarCollapsed && <TooltipContent side="right">Tasks</TooltipContent>}
+              </Tooltip>
+              {!isSidebarCollapsed && <span>Tasks</span>}
             </Link>
-          )}
 
-          <Link href="/repeating" className={cn(
-            "flex items-center py-2 px-3 rounded-md transition-colors",
-            location === '/repeating' ? "bg-primary/10 text-primary" : "hover:bg-muted"
-          )}>
-            <Repeat className="h-5 w-5 mr-3" />
-            <span>Repeating</span>
-          </Link>
+            {showArchiveLink && (
+              <Link href="/archive" className={cn(
+                "flex items-center py-2 px-3 rounded-md transition-colors",
+                location === '/archive' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+              )}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={isSidebarCollapsed ? "mx-auto" : "mr-3"}>
+                      <Archive className="h-5 w-5" />
+                    </div>
+                  </TooltipTrigger>
+                  {isSidebarCollapsed && <TooltipContent side="right">Archive</TooltipContent>}
+                </Tooltip>
+                {!isSidebarCollapsed && <span>Archive</span>}
+              </Link>
+            )}
 
-          <Link href="/about" className={cn(
-            "flex items-center py-2 px-3 rounded-md transition-colors",
-            location === '/about' ? "bg-primary/10 text-primary" : "hover:bg-muted"
-          )}>
-            <Settings className="h-5 w-5 mr-3" />
-            <span>Features</span>
-          </Link>
-          
-          <Link href="/contact" className={cn(
-            "flex items-center py-2 px-3 rounded-md transition-colors",
-            location === '/contact' ? "bg-primary/10 text-primary" : "hover:bg-muted"
-          )}>
-            <Mail className="h-5 w-5 mr-3" />
-            <span>Contact</span>
-          </Link>
+            <Link href="/repeating" className={cn(
+              "flex items-center py-2 px-3 rounded-md transition-colors",
+              location === '/repeating' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+            )}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={isSidebarCollapsed ? "mx-auto" : "mr-3"}>
+                    <Repeat className="h-5 w-5" />
+                  </div>
+                </TooltipTrigger>
+                {isSidebarCollapsed && <TooltipContent side="right">Repeating</TooltipContent>}
+              </Tooltip>
+              {!isSidebarCollapsed && <span>Repeating</span>}
+            </Link>
+
+            <Link href="/about" className={cn(
+              "flex items-center py-2 px-3 rounded-md transition-colors",
+              location === '/about' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+            )}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={isSidebarCollapsed ? "mx-auto" : "mr-3"}>
+                    <Settings className="h-5 w-5" />
+                  </div>
+                </TooltipTrigger>
+                {isSidebarCollapsed && <TooltipContent side="right">Features</TooltipContent>}
+              </Tooltip>
+              {!isSidebarCollapsed && <span>Features</span>}
+            </Link>
+            
+            <Link href="/contact" className={cn(
+              "flex items-center py-2 px-3 rounded-md transition-colors",
+              location === '/contact' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+            )}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={isSidebarCollapsed ? "mx-auto" : "mr-3"}>
+                    <Mail className="h-5 w-5" />
+                  </div>
+                </TooltipTrigger>
+                {isSidebarCollapsed && <TooltipContent side="right">Contact</TooltipContent>}
+              </Tooltip>
+              {!isSidebarCollapsed && <span>Contact</span>}
+            </Link>
+          </TooltipProvider>
         </div>
         
         <div className="mt-auto mb-4">
           {user && (
             <div className="border-t border-border pt-4">
-              <div className="flex items-center p-2 mb-2">
-                <Avatar className="h-8 w-8 mr-3">
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {getInitials(user.username)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">{user.username}</p>
-                  <p className="text-xs text-muted-foreground truncate max-w-[180px]">{user.email}</p>
-                </div>
-              </div>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={handleLogout}
-                disabled={logoutMutation.isPending}
-              >
-                {logoutMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    <span>Logging out...</span>
-                  </>
-                ) : (
-                  <>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </>
-                )}
-              </Button>
+              {!isSidebarCollapsed ? (
+                <>
+                  <div className="flex items-center p-2 mb-2">
+                    <Avatar className="h-8 w-8 mr-3">
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {getInitials(user.username)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{user.username}</p>
+                      <p className="text-xs text-muted-foreground truncate max-w-[180px]">{user.email}</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={handleLogout}
+                    disabled={logoutMutation.isPending}
+                  >
+                    {logoutMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <span>Logging out...</span>
+                      </>
+                    ) : (
+                      <>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Log out</span>
+                      </>
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-10 w-10 rounded-full mx-auto block"
+                        onClick={handleLogout}
+                        disabled={logoutMutation.isPending}
+                      >
+                        {logoutMutation.isPending ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <LogOut className="h-5 w-5" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Log out</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           )}
         </div>

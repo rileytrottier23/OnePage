@@ -74,10 +74,10 @@ export default function About() {
               <Clipboard className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h3 className="text-lg font-medium mb-1">Multi-line Paste</h3>
+              <h3 className="text-lg font-medium mb-1">Quick Task Creation</h3>
               <p className="text-muted-foreground">
-                Paste multi-line text into any task input field to create multiple tasks at once - one task per line.
-                Great for quickly importing lists from other sources.
+                Press Enter after adding a task to quickly focus the input field again, allowing for rapid sequential task entry.
+                Perfect for quickly capturing a list of to-dos.
               </p>
             </div>
           </div>
