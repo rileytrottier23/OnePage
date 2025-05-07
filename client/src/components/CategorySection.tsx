@@ -118,10 +118,14 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
   // Group tasks by their hierarchy
   const organizeTasks = () => {
     // First, organize tasks by parent-child relationship
-    // Sort by id to maintain consistent order regardless of completion state
-    const rootTasks = activeTasks
-      .filter(task => !task.parentTaskId)
-      .sort((a, b) => a.id - b.id);
+    // Get root tasks (no parent)
+    const rootTasks = activeTasks.filter(task => !task.parentTaskId);
+    
+    // Sort root tasks: incomplete tasks first (by id), then completed tasks (by id)
+    const sortedRootTasks = [
+      ...rootTasks.filter(task => !task.completed).sort((a, b) => a.id - b.id),
+      ...rootTasks.filter(task => task.completed).sort((a, b) => a.id - b.id)
+    ];
     
     const taskMap = new Map<number, Task[]>();
     
@@ -134,9 +138,13 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
       }
     });
     
-    // Sort children by id in each parent's group
+    // Sort children in each parent's group: incomplete tasks first, then completed tasks
     taskMap.forEach((children, parentId) => {
-      children.sort((a, b) => a.id - b.id);
+      // Replace the children array with a sorted version
+      taskMap.set(parentId, [
+        ...children.filter(task => !task.completed).sort((a, b) => a.id - b.id),
+        ...children.filter(task => task.completed).sort((a, b) => a.id - b.id)
+      ]);
     });
 
     // Helper function to render a task and its children
@@ -161,7 +169,7 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
     };
     
     // Render all root tasks and their children
-    return rootTasks.flatMap(renderTaskHierarchy);
+    return sortedRootTasks.flatMap(renderTaskHierarchy);
   };
 
   const handleSaveCategoryName = () => {
