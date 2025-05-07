@@ -102,45 +102,50 @@ export default function Home() {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 max-w-3xl min-h-screen">
-      <div className="py-6 sticky top-0 bg-background z-10">
-        <Header />
-      </div>
+    <div className="flex min-h-screen">
+      {/* Main content area - shifted to right to make room for side menu on desktop */}
+      <div className="flex-1 md:ml-[240px]">
+        <div className="py-6 px-4 sticky top-0 bg-background z-10">
+          <Header />
+        </div>
 
-      <DndContext 
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <main>
-          <TodaySection tasks={tasks} />
-
-          {categories.map(category => (
-            <CategorySection 
-              key={category.id} 
-              category={category} 
-              tasks={tasks.filter(task => task.categoryId === category.id)}
-            />
-          ))}
-
-          <Button 
-            className="w-full py-3 px-4 bg-card hover:bg-opacity-90 rounded-md flex items-center justify-center text-primary mb-6"
-            variant="ghost"
-            onClick={() => setIsAddCategoryDialogOpen(true)}
+        <div className="px-4 md:px-6 max-w-3xl mx-auto pb-16">
+          <DndContext 
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
           >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            Add New Category
-          </Button>
+            <main>
+              <TodaySection tasks={tasks} />
 
-          <div className="text-center mb-6">
-            <Link href="/archive">
-              <Button variant="ghost" className="text-muted-foreground hover:text-primary inline-flex items-center">
-                <ArchiveIcon className="h-5 w-5 mr-2" />
-                View Archived Tasks
+              {categories.map(category => (
+                <CategorySection 
+                  key={category.id} 
+                  category={category} 
+                  tasks={tasks.filter(task => task.categoryId === category.id)}
+                />
+              ))}
+
+              <Button 
+                className="w-full py-3 px-4 bg-card hover:bg-opacity-90 rounded-md flex items-center justify-center text-primary mb-6"
+                variant="ghost"
+                onClick={() => setIsAddCategoryDialogOpen(true)}
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                Add New Category
               </Button>
-            </Link>
-          </div>
-        </main>
-      </DndContext>
+
+              <div className="text-center mb-6">
+                <Link href="/archive">
+                  <Button variant="ghost" className="text-muted-foreground hover:text-primary inline-flex items-center">
+                    <ArchiveIcon className="h-5 w-5 mr-2" />
+                    View Archived Tasks
+                  </Button>
+                </Link>
+              </div>
+            </main>
+          </DndContext>
+        </div>
+      </div>
 
       <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
         <DialogContent className="bg-card">
