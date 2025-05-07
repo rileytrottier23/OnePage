@@ -26,7 +26,7 @@ export default function Header() {
   }, [isSidebarCollapsed]);
   
   const toggleSidebar = () => {
-    setIsSidebarCollapsed(prev => !prev);
+    setIsSidebarCollapsed((prev: boolean) => !prev);
   };
   
   const showArchiveLink = location === '/dashboard' || location === '/archive';
