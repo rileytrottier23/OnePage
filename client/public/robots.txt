@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Allow search engines to crawl landing and public pages
+Allow: /
+Allow: /about
+Allow: /auth
+Allow: /contact
+
+# Disallow sensitive or user-specific pages
+Disallow: /dashboard
+Disallow: /archive
