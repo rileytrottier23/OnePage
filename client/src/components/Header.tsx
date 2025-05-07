@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Archive, CheckCheck, HelpCircle, LogOut, Mail, Menu, User, X } from "lucide-react";
+import { Archive, CheckCheck, LogOut, Mail, Menu, Settings, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -46,8 +46,7 @@ export default function Header() {
         <SheetContent side="left" className="w-[240px] sm:w-[280px]">
           <div className="flex flex-col h-full py-4">
             <div className="mb-8 flex items-center">
-              <CheckCheck className="h-8 w-8 text-primary mr-2" />
-              <h2 className="text-xl font-bold">OnePage Menu</h2>
+              <h2 className="text-xl font-bold">Menu</h2>
             </div>
             
             <div className="space-y-4">
@@ -56,7 +55,7 @@ export default function Header() {
                 location === '/dashboard' ? "bg-primary/10 text-primary" : "hover:bg-muted"
               )}>
                 <CheckCheck className="h-5 w-5 mr-3" />
-                <span>Dashboard</span>
+                <span>Tasks</span>
               </Link>
 
               {showArchiveLink && (
@@ -73,8 +72,8 @@ export default function Header() {
                 "flex items-center py-2 px-3 rounded-md transition-colors",
                 location === '/about' ? "bg-primary/10 text-primary" : "hover:bg-muted"
               )}>
-                <HelpCircle className="h-5 w-5 mr-3" />
-                <span>Help</span>
+                <Settings className="h-5 w-5 mr-3" />
+                <span>Features</span>
               </Link>
               
               <Link href="/contact" className={cn(
@@ -127,10 +126,7 @@ export default function Header() {
       
       {/* Desktop side menu - hidden on mobile */}
       <div className="hidden md:flex fixed left-0 top-0 h-screen w-[240px] border-r border-border bg-background z-40 flex-col p-4">
-        <div className="mb-8 mt-4 flex items-center">
-          <CheckCheck className="h-8 w-8 text-primary mr-2" />
-          <h2 className="text-xl font-bold">OnePage</h2>
-        </div>
+        <div className="mb-8 mt-4"></div>
         
         <div className="space-y-4">
           <Link href="/dashboard" className={cn(
@@ -138,7 +134,7 @@ export default function Header() {
             location === '/dashboard' ? "bg-primary/10 text-primary" : "hover:bg-muted"
           )}>
             <CheckCheck className="h-5 w-5 mr-3" />
-            <span>Dashboard</span>
+            <span>Tasks</span>
           </Link>
 
           {showArchiveLink && (
@@ -155,8 +151,8 @@ export default function Header() {
             "flex items-center py-2 px-3 rounded-md transition-colors",
             location === '/about' ? "bg-primary/10 text-primary" : "hover:bg-muted"
           )}>
-            <HelpCircle className="h-5 w-5 mr-3" />
-            <span>Help</span>
+            <Settings className="h-5 w-5 mr-3" />
+            <span>Features</span>
           </Link>
           
           <Link href="/contact" className={cn(

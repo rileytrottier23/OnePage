@@ -236,7 +236,7 @@ export default function TaskItem({
         </button>
         
         <Checkbox 
-          className="h-3.5 w-3.5 rounded border-gray-600 mr-1.5" 
+          className="h-5 w-5 rounded border-gray-600 mr-2" 
           checked={isChecked} 
           onCheckedChange={handleCheckboxChange}
           disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
