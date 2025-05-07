@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Archive, HelpCircle, LogOut, Mail, User } from "lucide-react";
+import { Archive, CheckCheck, HelpCircle, LogOut, Mail, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -25,8 +25,9 @@ export default function Header() {
   return (
     <div className="flex justify-between items-center mb-4 px-2">
       <div className="flex items-center">
-        <Link href="/dashboard">
-          <h1 className="text-xl font-bold text-primary mr-2 hover:text-primary/90 transition-colors">OnePage</h1>
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <CheckCheck className="h-7 w-7 text-primary" />
+          <h1 className="text-2xl font-bold text-primary mr-2 hover:text-primary/90 transition-colors">OnePage</h1>
         </Link>
         <span className="text-xs text-muted-foreground">Task Management</span>
       </div>

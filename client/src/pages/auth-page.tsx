@@ -36,6 +36,18 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
   const { user, loginMutation, registerMutation } = useAuth();
+  
+  // Check URL for tab parameter to set initial tab
+  useEffect(() => {
+    // Get the current URL search params
+    const searchParams = new URLSearchParams(window.location.search);
+    const tabParam = searchParams.get('tab');
+    
+    // If tab parameter exists and is "register", set active tab to register
+    if (tabParam === "register") {
+      setActiveTab("register");
+    }
+  }, []);
 
   // Login form
   const loginForm = useForm<LoginFormValues>({
