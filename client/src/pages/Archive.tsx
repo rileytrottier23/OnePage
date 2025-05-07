@@ -9,9 +9,19 @@ import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import { Task } from "@shared/schema";
 
-interface ArchivedTask extends Task {
+interface ArchivedTask {
+  id: number;
+  text: string;
+  completed: boolean;
+  userId: number | null;
+  categoryId: number | null;
+  inTodaySection: boolean;
+  archived: boolean;
   completedAt: string;
-  originalCategory?: string;
+  createdAt: Date;
+  parentTaskId: number | null;
+  indentLevel: number;
+  originalCategory: string | null;
 }
 
 export default function Archive() {
