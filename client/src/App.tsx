@@ -12,6 +12,7 @@ import About from "@/pages/About";
 import AuthPage from "@/pages/auth-page";
 import ContactPage from "@/pages/contact-page";
 import LandingPage from "@/pages/LandingPage";
+import RepeatingTasksPage from "@/pages/RepeatingTasksPage";
 
 function Router() {
   return (
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/" component={LandingPage} />
       <ProtectedRoute path="/dashboard" component={Home} />
       <ProtectedRoute path="/archive" component={Archive} />
+      <ProtectedRoute path="/repeating" component={RepeatingTasksPage} />
       <Route path="/about" component={About} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/contact" component={ContactPage} />

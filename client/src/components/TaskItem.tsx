@@ -241,7 +241,7 @@ export default function TaskItem({
           onCheckedChange={handleCheckboxChange}
           disabled={updateTaskMutation.isPending || moveTaskMutation.isPending}
         />
-        <span className={cn("flex-grow flex items-center leading-tight", task.completed && "completed-task")}>
+        <span className={cn("flex-grow flex items-center text-base leading-snug", task.completed && "completed-task")}>
           {task.indentLevel > 0 && (
             <span className="subtask-indicator"></span>
           )}

@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Archive, CheckCheck, LogOut, Mail, Menu, Settings, User } from "lucide-react";
+import { Archive, CheckCheck, LogOut, Mail, Menu, Repeat, Settings, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -67,6 +67,14 @@ export default function Header() {
                   <span>Archive</span>
                 </Link>
               )}
+
+              <Link href="/repeating" className={cn(
+                "flex items-center py-2 px-3 rounded-md transition-colors",
+                location === '/repeating' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+              )}>
+                <Repeat className="h-5 w-5 mr-3" />
+                <span>Repeating</span>
+              </Link>
 
               <Link href="/about" className={cn(
                 "flex items-center py-2 px-3 rounded-md transition-colors",
@@ -146,6 +154,14 @@ export default function Header() {
               <span>Archive</span>
             </Link>
           )}
+
+          <Link href="/repeating" className={cn(
+            "flex items-center py-2 px-3 rounded-md transition-colors",
+            location === '/repeating' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+          )}>
+            <Repeat className="h-5 w-5 mr-3" />
+            <span>Repeating</span>
+          </Link>
 
           <Link href="/about" className={cn(
             "flex items-center py-2 px-3 rounded-md transition-colors",
