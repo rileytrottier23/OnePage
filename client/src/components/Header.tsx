@@ -11,7 +11,7 @@ export default function Header() {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
   
-  const showArchiveLink = location === '/' || location === '/archive';
+  const showArchiveLink = location === '/dashboard' || location === '/archive';
   
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -25,7 +25,7 @@ export default function Header() {
   return (
     <div className="flex justify-between items-center mb-4 px-2">
       <div className="flex items-center">
-        <Link href="/">
+        <Link href="/dashboard">
           <h1 className="text-xl font-bold text-primary mr-2 hover:text-primary/90 transition-colors">OnePage</h1>
         </Link>
         <span className="text-xs text-muted-foreground">Task Management</span>

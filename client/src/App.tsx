@@ -9,13 +9,15 @@ import Archive from "@/pages/Archive";
 import About from "@/pages/About";
 import AuthPage from "@/pages/auth-page";
 import ContactPage from "@/pages/contact-page";
+import LandingPage from "@/pages/LandingPage";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
     <Switch>
-      <ProtectedRoute path="/" component={Home} />
+      <Route path="/" component={LandingPage} />
+      <ProtectedRoute path="/dashboard" component={Home} />
       <ProtectedRoute path="/archive" component={Archive} />
       <Route path="/about" component={About} />
       <Route path="/auth" component={AuthPage} />
