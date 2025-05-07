@@ -3,8 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { MailIcon, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import Header from "@/components/Header";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function ContactPage() {
+  const { user } = useAuth();
+  const homeLink = user ? "/dashboard" : "/";
+  
   return (
     <div className="container mx-auto px-4 sm:px-6 max-w-3xl min-h-screen">
       <div className="py-6 sticky top-0 bg-background z-10">
@@ -47,7 +51,7 @@ export default function ContactPage() {
             </div>
 
             <div className="pt-4">
-              <Link href="/">
+              <Link href={homeLink}>
                 <Button className="w-full">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to OnePage

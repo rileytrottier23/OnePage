@@ -10,7 +10,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2 } from "lucide-react";
+import { Loader2, Home } from "lucide-react";
 import { Link } from "wouter";
 
 // Login form schema
@@ -77,7 +77,11 @@ export default function AuthPage() {
       <div className="flex-1 flex items-center justify-center p-6">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-2xl text-center">OnePage</CardTitle>
+            <CardTitle className="text-2xl text-center">
+              <Link href="/" className="hover:text-primary/80 transition-colors">
+                OnePage
+              </Link>
+            </CardTitle>
             <CardDescription className="text-center">
               {activeTab === "login" 
                 ? "Sign in to your account to continue" 
@@ -219,7 +223,7 @@ export default function AuthPage() {
               </TabsContent>
             </Tabs>
           </CardContent>
-          <CardFooter className="flex justify-center">
+          <CardFooter className="flex flex-col gap-4 items-center">
             <p className="text-sm text-muted-foreground">
               {activeTab === "login" ? (
                 <span>Don't have an account? <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("register")}>Sign up</Button></span>
@@ -227,6 +231,10 @@ export default function AuthPage() {
                 <span>Already have an account? <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("login")}>Sign in</Button></span>
               )}
             </p>
+            <Link href="/" className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1">
+              <Home className="h-4 w-4" />
+              <span>Back to Home</span>
+            </Link>
           </CardFooter>
         </Card>
       </div>
