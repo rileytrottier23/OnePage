@@ -169,7 +169,7 @@ export default function LandingPage() {
             <div className="bg-background p-4 rounded-lg shadow-sm border border-border/50">
               <div className="aspect-video relative overflow-hidden rounded-md border border-border/50">
                 <img 
-                  src="/images/task-list-screenshot.svg" 
+                  src="images/task-list-screenshot.svg" 
                   alt="OnePage task list interface showing categories and tasks" 
                   className="w-full h-full object-cover"
                 />
@@ -183,8 +183,8 @@ export default function LandingPage() {
             <div className="bg-background p-4 rounded-lg shadow-sm border border-border/50">
               <div className="aspect-video relative overflow-hidden rounded-md border border-border/50">
                 <img 
-                  src="/images/recurring-task-screenshot.svg" 
-                  alt="Setting up a repeating task in OnePage" 
+                  src="images/recurring-task-screenshot.svg" 
+                  alt="Repeating tasks table in OnePage" 
                   className="w-full h-full object-cover"
                 />
               </div>
