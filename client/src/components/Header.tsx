@@ -117,9 +117,9 @@ export default function Header() {
                         {getInitials(user.username)}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <p className="font-medium">{user.username}</p>
-                      <p className="text-xs text-muted-foreground truncate max-w-[180px]">{user.email}</p>
+                    <div className="max-w-[150px]">
+                      <p className="font-medium truncate">{user.username}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
                   </div>
                   <Button 
@@ -266,9 +266,9 @@ export default function Header() {
                         {getInitials(user.username)}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <p className="font-medium">{user.username}</p>
-                      <p className="text-xs text-muted-foreground truncate max-w-[180px]">{user.email}</p>
+                    <div className="max-w-[150px]">
+                      <p className="font-medium truncate">{user.username}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
                   </div>
                   <Button 
