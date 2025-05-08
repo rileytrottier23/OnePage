@@ -144,7 +144,14 @@ export default function TaskItem({
   };
   
   // Use our repeating tasks hook
-  const { createRepeatingTask, isCreatingRepeatingTask } = useRepeatingTasks();
+  const { 
+    repeatingTasks = [],
+    createRepeatingTask, 
+    isCreatingRepeatingTask 
+  } = useRepeatingTasks();
+  
+  // Check if this task already has a repeating task set up
+  const hasExistingRepeatingTask = repeatingTasks.some(rt => rt.taskText === task.text);
   
   const handleSetupRepeatingTask = () => {
     if (!repeatCategoryId) {
@@ -293,11 +300,12 @@ export default function TaskItem({
                 <CommandSeparator />
                 <CommandGroup heading="Repeating">
                   <CommandItem
-                    onSelect={handleOpenRepeatDialog}
-                    className="text-primary"
+                    onSelect={hasExistingRepeatingTask ? undefined : handleOpenRepeatDialog}
+                    disabled={hasExistingRepeatingTask}
+                    className={hasExistingRepeatingTask ? "opacity-50" : "text-primary"}
                   >
                     <Repeat className="mr-2 h-4 w-4" />
-                    Set up repeating task
+                    {hasExistingRepeatingTask ? "Already repeating" : "Set up repeating task"}
                   </CommandItem>
                 </CommandGroup>
               </Command>
@@ -340,11 +348,12 @@ export default function TaskItem({
                 <CommandSeparator />
                 <CommandGroup heading="Repeating">
                   <CommandItem
-                    onSelect={handleOpenRepeatDialog}
-                    className="text-primary"
+                    onSelect={hasExistingRepeatingTask ? undefined : handleOpenRepeatDialog}
+                    disabled={hasExistingRepeatingTask}
+                    className={hasExistingRepeatingTask ? "opacity-50" : "text-primary"}
                   >
                     <Repeat className="mr-2 h-4 w-4" />
-                    Set up repeating task
+                    {hasExistingRepeatingTask ? "Already repeating" : "Set up repeating task"}
                   </CommandItem>
                 </CommandGroup>
               </Command>
@@ -436,8 +445,11 @@ export default function TaskItem({
             <Button variant="outline" onClick={() => setIsRepeatDialogOpen(false)} disabled={isCreatingRepeatingTask}>
               Cancel
             </Button>
-            <Button onClick={handleSetupRepeatingTask} disabled={isCreatingRepeatingTask || !repeatCategoryId}>
-              {isCreatingRepeatingTask ? 'Saving...' : 'Save'}
+            <Button 
+              onClick={handleSetupRepeatingTask} 
+              disabled={isCreatingRepeatingTask || !repeatCategoryId || hasExistingRepeatingTask}
+            >
+              {isCreatingRepeatingTask ? 'Setting up...' : 'Set Up Repeating Task'}
             </Button>
           </DialogFooter>
         </DialogContent>
