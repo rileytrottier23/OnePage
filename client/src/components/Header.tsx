@@ -29,7 +29,8 @@ export default function Header() {
     setIsSidebarCollapsed((prev: boolean) => !prev);
   };
   
-  const showArchiveLink = location === '/dashboard' || location === '/archive';
+  // Always show archive link regardless of current location
+  const showArchiveLink = true;
   
   const handleLogout = () => {
     logoutMutation.mutate();
