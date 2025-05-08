@@ -28,9 +28,7 @@ export function useRepeatingTasks() {
         throw new Error('Failed to fetch repeating tasks');
       }
       return res.json();
-    },
-    // Only try to fetch if we explicitly set up a repeating task
-    enabled: isSettingUp
+    }
   });
 
   // Create a new repeating task
