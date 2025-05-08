@@ -1,88 +1,92 @@
-<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
-  <!-- Dark mode background -->
-  <rect width="800" height="600" fill="#121212" rx="8" ry="8"/>
+<svg width="800" height="450" viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="450" fill="#1e1e2e" rx="8" ry="8"/>
   
-  <!-- App Header -->
-  <g transform="translate(20, 20)">
-    <rect width="760" height="50" fill="#1a1a1a" rx="4" ry="4"/>
-    <g transform="translate(15, 15)">
-      <path d="M14 10l-2 2m0 0l-2-2m2 2l2-2m-2 2l-2 2" stroke="#E879F9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M20 12l-6-6m0 0l-6 6" stroke="#E879F9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <text x="35" y="10" font-family="Arial" font-size="20" fill="#E879F9" font-weight="bold">OnePage</text>
-      <text x="150" y="10" font-family="Arial" font-size="12" fill="#888">Task Management</text>
-    </g>
-    <g transform="translate(600, 15)">
-      <rect width="30" height="30" fill="#1f1f1f" rx="15" ry="15"/>
-      <text x="15" y="22" font-family="Arial" font-size="14" fill="#E879F9" font-weight="bold" text-anchor="middle">RT</text>
-    </g>
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="240" height="450" fill="#181825" rx="0" ry="0"/>
+  
+  <!-- Sidebar Logo -->
+  <g transform="translate(20, 25)">
+    <rect x="0" y="0" width="30" height="30" rx="6" ry="6" fill="#e91e63"/>
+    <text x="40" y="20" font-family="Arial" font-size="20" font-weight="bold" fill="#ffffff">OnePage</text>
   </g>
   
-  <!-- Modal for creating a recurring task -->
-  <g transform="translate(150, 100)">
-    <rect width="500" height="400" fill="#1a1a1a" rx="8" ry="8" filter="drop-shadow(0 10px 8px rgba(0, 0, 0, 0.04)) drop-shadow(0 4px 3px rgba(0, 0, 0, 0.1))"/>
+  <!-- Sidebar Menu Items -->
+  <g transform="translate(20, 80)">
+    <text x="40" y="25" font-family="Arial" font-size="14" fill="#94a3b8">Tasks</text>
     
-    <!-- Modal header -->
-    <text x="30" y="50" font-family="Arial" font-size="20" fill="#E879F9" font-weight="bold">Create Repeating Task</text>
+    <rect x="0" y="50" width="200" height="40" rx="6" ry="6" fill="#e91e63" opacity="0.2"/>
+    <text x="40" y="75" font-family="Arial" font-size="14" fill="#ffffff">Repeating Tasks</text>
     
-    <!-- Task input field -->
-    <text x="30" y="90" font-family="Arial" font-size="14" fill="#ccc">Task</text>
-    <rect x="30" y="100" width="440" height="40" fill="#2a2a2a" rx="4" ry="4"/>
-    <text x="45" y="125" font-family="Arial" font-size="14" fill="#fff">Weekly team status meeting</text>
-    
-    <!-- Repeat type selection -->
-    <text x="30" y="170" font-family="Arial" font-size="14" fill="#ccc">Repeat</text>
-    <rect x="30" y="180" width="440" height="40" fill="#2a2a2a" rx="4" ry="4"/>
-    
-    <!-- Dropdown with selected option -->
-    <text x="45" y="205" font-family="Arial" font-size="14" fill="#fff">Weekly</text>
-    <path d="M455,200 l-5,-5 l-5,5" stroke="#ccc" stroke-width="1.5" fill="none"/>
-    
-    <!-- Category selection -->
-    <text x="30" y="250" font-family="Arial" font-size="14" fill="#ccc">Category</text>
-    <rect x="30" y="260" width="440" height="40" fill="#2a2a2a" rx="4" ry="4"/>
-    
-    <!-- Dropdown with selected option -->
-    <text x="45" y="285" font-family="Arial" font-size="14" fill="#fff">Work</text>
-    <path d="M455,280 l-5,-5 l-5,5" stroke="#ccc" stroke-width="1.5" fill="none"/>
-    
-    <!-- Buttons -->
-    <rect x="30" y="330" width="100" height="40" fill="transparent" rx="4" ry="4" stroke="#E879F9" stroke-width="1.5"/>
-    <text x="80" y="355" font-family="Arial" font-size="14" fill="#E879F9" text-anchor="middle">Cancel</text>
-    
-    <rect x="140" y="330" width="120" height="40" fill="#E879F9" rx="4" ry="4"/>
-    <text x="200" y="355" font-family="Arial" font-size="14" fill="#000" text-anchor="middle">Create</text>
-    
-    <!-- Repeat type explanation -->
-    <rect x="30" y="390" width="440" height="40" fill="#2a2a2a" rx="4" ry="4" opacity="0.6"/>
-    <text x="45" y="415" font-family="Arial" font-size="12" fill="#ccc">Task will automatically repeat every week at 7am</text>
+    <text x="40" y="125" font-family="Arial" font-size="14" fill="#94a3b8">Archive</text>
+    <text x="40" y="175" font-family="Arial" font-size="14" fill="#94a3b8">About</text>
+    <text x="40" y="225" font-family="Arial" font-size="14" fill="#94a3b8">Contact</text>
   </g>
   
-  <!-- Background app blur effect -->
-  <g transform="translate(20, 90)" opacity="0.3">
-    <text x="0" y="20" font-family="Arial" font-size="18" fill="#E879F9" font-weight="bold">Today</text>
-    <rect width="760" height="110" fill="#1a1a1a" rx="4" ry="4" y="30"/>
-    
-    <g transform="translate(15, 50)">
-      <rect width="730" height="30" fill="#1f1f1f" rx="4" ry="4"/>
-      <circle cx="15" cy="15" r="8" stroke="#E879F9" stroke-width="1.5" fill="none"/>
-      <text x="35" y="20" font-family="Arial" font-size="14" fill="#fff">Prepare presentation slides for the meeting</text>
-    </g>
-    
-    <g transform="translate(15, 90)">
-      <rect width="730" height="30" fill="#1f1f1f" rx="4" ry="4"/>
-      <circle cx="15" cy="15" r="8" stroke="#E879F9" stroke-width="1.5" fill="none"/>
-      <text x="35" y="20" font-family="Arial" font-size="14" fill="#fff">Call dentist to schedule appointment</text>
-    </g>
+  <!-- User Profile -->
+  <g transform="translate(20, 400)">
+    <circle cx="15" cy="15" r="15" fill="#334155"/>
+    <text x="40" y="20" font-family="Arial" font-size="14" fill="#ffffff">riley.a.trottier@gmail.com</text>
   </g>
   
-  <g transform="translate(20, 220)" opacity="0.3">
-    <text x="0" y="20" font-family="Arial" font-size="18" fill="#E879F9" font-weight="bold">Work</text>
-    <rect width="760" height="70" fill="#1a1a1a" rx="4" ry="4" y="30"/>
+  <!-- Main Content -->
+  <g transform="translate(260, 20)">
+    <!-- Header -->
+    <text x="0" y="30" font-family="Arial" font-size="24" font-weight="bold" fill="#ffffff">Repeating Tasks</text>
     
-    <g transform="translate(15, 50)">
-      <rect width="730" height="30" fill="#1f1f1f" rx="4" ry="4"/>
-      <circle cx="15" cy="15" r="8" stroke="#E879F9" stroke-width="1.5" fill="none"/>
-      <text x="35" y="20" font-family="Arial" font-size="14" fill="#fff">Draft quarterly report</text>
+    <!-- Table Header -->
+    <rect x="0" y="50" width="520" height="50" rx="6" ry="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <line x1="0" y1="90" x2="520" y2="90" stroke="#334155" stroke-width="1"/>
+    
+    <text x="20" y="75" font-family="Arial" font-size="14" font-weight="bold" fill="#ffffff">Task</text>
+    <text x="280" y="75" font-family="Arial" font-size="14" font-weight="bold" fill="#ffffff">Frequency</text>
+    <text x="380" y="75" font-family="Arial" font-size="14" font-weight="bold" fill="#ffffff">Category</text>
+    <text x="480" y="75" font-family="Arial" font-size="14" font-weight="bold" fill="#ffffff">Actions</text>
+    
+    <!-- Table Rows -->
+    <g transform="translate(0, 100)">
+      <rect x="0" y="0" width="520" height="60" rx="0" ry="0" fill="#262636" stroke="#334155" stroke-width="1"/>
+      <text x="20" y="35" font-family="Arial" font-size="14" fill="#ffffff">Follow up with client about project status</text>
+      <text x="280" y="35" font-family="Arial" font-size="14" fill="#ffffff">Weekly</text>
+      <text x="380" y="35" font-family="Arial" font-size="14" fill="#ffffff">Work</text>
+      <circle cx="480" cy="30" r="15" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="480" y="35" font-family="Arial" font-size="14" fill="#94a3b8" text-anchor="middle">···</text>
+    </g>
+    
+    <g transform="translate(0, 160)">
+      <rect x="0" y="0" width="520" height="60" rx="0" ry="0" fill="#1e1e2e" stroke="#334155" stroke-width="1"/>
+      <text x="20" y="35" font-family="Arial" font-size="14" fill="#ffffff">Update team on project progress</text>
+      <text x="280" y="35" font-family="Arial" font-size="14" fill="#ffffff">Daily</text>
+      <text x="380" y="35" font-family="Arial" font-size="14" fill="#ffffff">Work</text>
+      <circle cx="480" cy="30" r="15" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="480" y="35" font-family="Arial" font-size="14" fill="#94a3b8" text-anchor="middle">···</text>
+    </g>
+    
+    <g transform="translate(0, 220)">
+      <rect x="0" y="0" width="520" height="60" rx="0" ry="0" fill="#262636" stroke="#334155" stroke-width="1"/>
+      <text x="20" y="35" font-family="Arial" font-size="14" fill="#ffffff">Journal</text>
+      <text x="280" y="35" font-family="Arial" font-size="14" fill="#ffffff">Daily</text>
+      <text x="380" y="35" font-family="Arial" font-size="14" fill="#ffffff">Personal</text>
+      <circle cx="480" cy="30" r="15" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="480" y="35" font-family="Arial" font-size="14" fill="#94a3b8" text-anchor="middle">···</text>
+    </g>
+    
+    <g transform="translate(0, 280)">
+      <rect x="0" y="0" width="520" height="60" rx="0" ry="0" fill="#1e1e2e" stroke="#334155" stroke-width="1"/>
+      <text x="20" y="35" font-family="Arial" font-size="14" fill="#ffffff">Review monthly budget</text>
+      <text x="280" y="35" font-family="Arial" font-size="14" fill="#ffffff">Monthly</text>
+      <text x="380" y="35" font-family="Arial" font-size="14" fill="#ffffff">Finance</text>
+      <circle cx="480" cy="30" r="15" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="480" y="35" font-family="Arial" font-size="14" fill="#94a3b8" text-anchor="middle">···</text>
+    </g>
+    
+    <g transform="translate(0, 340)">
+      <rect x="0" y="0" width="520" height="60" rx="0" ry="0" fill="#262636" stroke="#334155" stroke-width="1"/>
+      <text x="20" y="35" font-family="Arial" font-size="14" fill="#ffffff">Backup important files</text>
+      <text x="280" y="35" font-family="Arial" font-size="14" fill="#ffffff">Quarterly</text>
+      <text x="380" y="35" font-family="Arial" font-size="14" fill="#ffffff">Tech</text>
+      <circle cx="480" cy="30" r="15" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="480" y="35" font-family="Arial" font-size="14" fill="#94a3b8" text-anchor="middle">···</text>
     </g>
   </g>
 </svg>

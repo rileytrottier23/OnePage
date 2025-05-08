@@ -3,7 +3,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
-import { Task, Category } from "@shared/schema";
+import { Task, Category, RepeatingTask } from "@shared/schema";
 import { ChevronUp, ChevronDown, GripVertical, Repeat, Calendar, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDraggable } from "@dnd-kit/core";
@@ -151,7 +151,7 @@ export default function TaskItem({
   } = useRepeatingTasks();
   
   // Check if this task already has a repeating task set up
-  const hasExistingRepeatingTask = repeatingTasks.some(rt => rt.taskText === task.text);
+  const hasExistingRepeatingTask = repeatingTasks.some((rt: RepeatingTask) => rt.taskText === task.text);
   
   const handleSetupRepeatingTask = () => {
     if (!repeatCategoryId) {
