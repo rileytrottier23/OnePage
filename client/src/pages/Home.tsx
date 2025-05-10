@@ -122,7 +122,20 @@ export default function Home() {
     );
   }
 
-  // Handle drag end for moving tasks between categories
+  // Mutation for reordering tasks
+  const reorderTaskMutation = useMutation({
+    mutationFn: ({ taskId, targetTaskId, position }: { taskId: number, targetTaskId: number, position: 'before' | 'after' }) => {
+      return apiRequest("PATCH", `/api/tasks/${taskId}/reorder`, { 
+        targetTaskId,
+        position
+      }).then(res => res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    }
+  });
+
+  // Handle drag end for moving tasks between categories or reordering
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
@@ -132,16 +145,42 @@ export default function Home() {
     const activeData = active.data.current;
     const overData = over.data.current;
     
+    // Case 1: Move task to a different category
     if (
       activeData?.type === 'task' && 
       overData?.type === 'category' && 
       activeData.task.categoryId !== overData.categoryId
     ) {
-      // Move task to a different category
       moveTaskMutation.mutate({
         taskId: activeData.task.id,
         categoryId: overData.categoryId
       });
+    }
+    
+    // Case 2: Reorder tasks within the same category or today section
+    else if (
+      activeData?.type === 'task' &&
+      overData?.type === 'task' &&
+      activeData.task.id !== overData.task.id
+    ) {
+      // Check if both tasks are in the same section (today or same category)
+      const sameSection = 
+        (activeData.sourceSection === 'today' && overData.sourceSection === 'today') ||
+        (activeData.sourceSection === 'category' && 
+         overData.sourceSection === 'category' && 
+         activeData.task.categoryId === overData.task.categoryId);
+         
+      if (sameSection) {
+        // Determine if we're placing before or after the target task
+        const activeIndex = allTasks.findIndex(t => t.id === activeData.task.id);
+        const overIndex = allTasks.findIndex(t => t.id === overData.task.id);
+        
+        reorderTaskMutation.mutate({
+          taskId: activeData.task.id,
+          targetTaskId: overData.task.id,
+          position: activeIndex > overIndex ? 'before' : 'after'
+        });
+      }
     }
   };
 

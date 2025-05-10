@@ -115,9 +115,50 @@ export default function TaskItem({
   const [repeatType, setRepeatType] = useState<'daily' | 'weekly' | 'monthly' | 'quarterly'>('daily');
   const [repeatCategoryId, setRepeatCategoryId] = useState<number | null>(task.categoryId);
 
+  // Add a function to fetch child tasks
+  const { data: allTasks = [] } = useQuery<Task[]>({ 
+    queryKey: ["/api/tasks"],
+  });
+  
+  const childTasks = allTasks.filter(t => t.parentTaskId === task.id);
+  
+  const completeChildTasksMutation = useMutation({
+    mutationFn: async (taskIds: number[]) => {
+      // Complete all child tasks in sequence
+      const results = [];
+      for (const id of taskIds) {
+        const result = await apiRequest("PATCH", `/api/tasks/${id}`, { completed: true })
+          .then(res => res.json());
+        results.push(result);
+      }
+      return results;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    }
+  });
+  
   const handleCheckboxChange = (checked: boolean) => {
     setIsChecked(checked);
     updateTaskMutation.mutate({ completed: checked });
+    
+    // If completing a task (not uncompleting) and it has children, complete them too
+    if (checked && childTasks.length > 0) {
+      // Get all descendant tasks recursively
+      const findAllDescendants = (parentId: number): number[] => {
+        const directChildren = allTasks.filter(t => t.parentTaskId === parentId);
+        if (directChildren.length === 0) return [];
+        
+        const childIds = directChildren.map(c => c.id);
+        const descendantIds = directChildren.flatMap(c => findAllDescendants(c.id));
+        return [...childIds, ...descendantIds];
+      };
+      
+      const allChildTaskIds = findAllDescendants(task.id);
+      if (allChildTaskIds.length > 0) {
+        completeChildTasksMutation.mutate(allChildTaskIds);
+      }
+    }
   };
 
   const handleMoveTask = () => {
