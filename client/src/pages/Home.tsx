@@ -11,7 +11,8 @@ import { PlusIcon, Settings, Archive as ArchiveIcon, Check } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, pointerWithin, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Task, Category } from "@shared/schema";
 
 export default function Home() {
@@ -65,6 +66,9 @@ export default function Home() {
   const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"]
   });
+  
+  // Create a reference to tasks for use in drag and drop operations
+  const allTasks = tasks;
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<Category[]>({
     queryKey: ["/api/categories"]
@@ -172,8 +176,8 @@ export default function Home() {
          
       if (sameSection) {
         // Determine if we're placing before or after the target task
-        const activeIndex = allTasks.findIndex(t => t.id === activeData.task.id);
-        const overIndex = allTasks.findIndex(t => t.id === overData.task.id);
+        const activeIndex = allTasks.findIndex((t: Task) => t.id === activeData.task.id);
+        const overIndex = allTasks.findIndex((t: Task) => t.id === overData.task.id);
         
         reorderTaskMutation.mutate({
           taskId: activeData.task.id,
@@ -196,19 +200,38 @@ export default function Home() {
 
         <div className="px-4 md:px-6 max-w-3xl mx-auto pb-16">
           <DndContext 
-            collisionDetection={closestCenter}
+            collisionDetection={pointerWithin}
             onDragEnd={handleDragEnd}
           >
             <main>
-              <TodaySection tasks={tasks} />
+              {/* Today Section */}
+              <SortableContext 
+                items={tasks.filter(t => t.inTodaySection).map(t => `task-${t.id}`)}
+                strategy={verticalListSortingStrategy}
+              >
+                <TodaySection tasks={tasks} />
+              </SortableContext>
 
-              {categories.map(category => (
-                <CategorySection 
-                  key={category.id} 
-                  category={category} 
-                  tasks={tasks.filter(task => task.categoryId === category.id)}
-                />
-              ))}
+              {/* Category Sections */}
+              {categories.map(category => {
+                const categoryTasks = tasks.filter(task => 
+                  task.categoryId === category.id && !task.inTodaySection
+                );
+                
+                return (
+                  <SortableContext
+                    key={category.id}
+                    items={categoryTasks.map(t => `task-${t.id}`)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <CategorySection 
+                      key={category.id} 
+                      category={category} 
+                      tasks={categoryTasks}
+                    />
+                  </SortableContext>
+                );
+              })}
 
               <Button 
                 className="w-full py-3 px-4 bg-card hover:bg-opacity-90 rounded-md flex items-center justify-center text-primary mb-6"
