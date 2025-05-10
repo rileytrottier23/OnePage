@@ -31,9 +31,11 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
         inTodaySection: true
       }).then(res => res.json());
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       setNewTaskText("");
+      // Store the last created task ID for potential indentation
+      setLastCreatedTaskId(data.id);
       
       // Focus the input again to allow continuous task creation
       setTimeout(() => {
@@ -70,6 +72,20 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
     }
   });
 
+  const [lastCreatedTaskId, setLastCreatedTaskId] = useState<number | null>(null);
+  
+  // Define indent task mutation outside the handler for better performance
+  const indentTaskMutation = useMutation({
+    mutationFn: (taskId: number) => {
+      return apiRequest("PATCH", `/api/tasks/${taskId}/indent`, { increase: true })
+        .then(res => res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      setLastCreatedTaskId(null);
+    }
+  });
+  
   const handleAddTask = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && newTaskText.trim() !== "") {
       // Handle multi-line paste - split by newline characters
@@ -91,6 +107,14 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
           taskInputRef.current.focus();
         }
       }, 0);
+    }
+  };
+  
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Tab" && lastCreatedTaskId !== null) {
+      // Allow indenting the last created task with Tab
+      e.preventDefault();
+      indentTaskMutation.mutate(lastCreatedTaskId);
     }
   };
 
@@ -225,7 +249,8 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
               }
             }}
             onKeyUp={handleAddTask}
-            disabled={addTaskMutation.isPending}
+            onKeyDown={handleKeyDown}
+            disabled={addTaskMutation.isPending || indentTaskMutation.isPending}
           />
         </div>
       </div>

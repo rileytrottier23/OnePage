@@ -34,6 +34,8 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
   // Filter active tasks and sort by parent-child relationships
   const activeTasks = tasks.filter(task => !task.inTodaySection);
   
+  const [lastCreatedTaskId, setLastCreatedTaskId] = useState<number | null>(null);
+  
   const addTaskMutation = useMutation({
     mutationFn: (text: string) => {
       return apiRequest("POST", "/api/tasks", {
@@ -41,10 +43,12 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
         categoryId: category.id
       }).then(res => res.json());
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       setNewTaskText("");
+      // Store the last created task ID for potential indentation
+      setLastCreatedTaskId(data.id);
       
       // Focus the input again to allow continuous task creation
       setTimeout(() => {
@@ -80,6 +84,18 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
 
 
 
+  // Define indent task mutation 
+  const indentTaskMutation = useMutation({
+    mutationFn: (taskId: number) => {
+      return apiRequest("PATCH", `/api/tasks/${taskId}/indent`, { increase: true })
+        .then(res => res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      setLastCreatedTaskId(null);
+    }
+  });
+  
   const handleAddTask = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && newTaskText.trim() !== "") {
       // Handle multi-line paste - split by newline characters
@@ -94,12 +110,19 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
         // Single line - create a single task
         addTaskMutation.mutate(newTaskText.trim());
       }
-    } else if (e.key === "Tab") {
+    }
+  };
+  
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Tab") {
       // Prevent default Tab behavior
       e.preventDefault();
       
-      // If there's text in the input and we press Tab, create an indented task
-      if (newTaskText.trim() !== "") {
+      if (lastCreatedTaskId !== null) {
+        // Indent the last created task
+        indentTaskMutation.mutate(lastCreatedTaskId);
+      } else if (newTaskText.trim() !== "") {
+        // If there's text in the input and we press Tab, create a task and remember to indent it
         addTaskMutation.mutate(newTaskText.trim());
       }
     }
@@ -263,8 +286,9 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
                 setNewTaskText(e.target.value);
               }
             }}
-            onKeyDown={handleAddTask}
-            disabled={addTaskMutation.isPending}
+            onKeyUp={handleAddTask}
+            onKeyDown={handleKeyDown}
+            disabled={addTaskMutation.isPending || indentTaskMutation.isPending}
           />
         </div>
       </div>
