@@ -7,6 +7,8 @@ import { Task, Category, RepeatingTask } from "@shared/schema";
 import { ChevronUp, ChevronDown, GripVertical, Repeat, Calendar, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDraggable } from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useRepeatingTasks } from "@/hooks/use-repeating-tasks";
 import { 
   Popover, 
@@ -51,14 +53,15 @@ export default function TaskItem({
   const [isChecked, setIsChecked] = useState(task.completed);
   const taskRef = useRef<HTMLDivElement>(null);
   
-  // Set up draggable
+  // Set up sortable (enhanced draggable)
   const { 
-    setNodeRef, 
-    transform, 
-    isDragging,
     attributes,
-    listeners
-  } = useDraggable({
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({
     id: `task-${task.id}`,
     data: {
       type: 'task',
@@ -256,10 +259,12 @@ export default function TaskItem({
   // Determine indentation level class
   const indentClass = task.indentLevel > 0 ? `task-indent-${task.indentLevel}` : '';
 
-  const dragStyle = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    zIndex: 999
-  } : undefined;
+  // Enhanced drag style with proper transitions using the CSS helper
+  const dragStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition: transition,
+    zIndex: isDragging ? 999 : undefined
+  };
 
   return (
     <>
@@ -267,7 +272,7 @@ export default function TaskItem({
         ref={setNodeRef}
         style={dragStyle}
         className={cn(
-          "task-item flex items-center rounded-md cursor-grab relative",
+          "task-item flex items-center rounded-md cursor-default relative group",
           indentClass,
           updateTaskMutation.isPending && "opacity-70",
           isDragging && "opacity-50 bg-muted"
@@ -277,8 +282,10 @@ export default function TaskItem({
       >
         {/* Handle for dragging */}
         <button 
-          className="drag-handle opacity-0 group-hover:opacity-70 mr-0.5 cursor-grab flex items-center p-0.5 hover:bg-muted rounded"
+          className="drag-handle opacity-30 hover:opacity-100 mr-0.5 cursor-grab flex items-center p-0.5 hover:bg-muted rounded"
           title="Drag to move"
+          {...attributes}
+          {...listeners}
         >
           <GripVertical className="h-3 w-3 text-muted-foreground" />
         </button>
