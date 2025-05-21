@@ -5,6 +5,7 @@ import { insertCategorySchema, insertTaskSchema, insertRepeatingTaskSchema } fro
 import { z } from "zod";
 import { ZodError } from "zod";
 import { setupAuth } from "./auth";
+import { generateInsights } from "./openai";
 
 // Function to schedule daily tasks like archiving completed tasks and processing repeating tasks
 function setupScheduledTasks() {
@@ -502,6 +503,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.id;
       await storage.processRepeatingTasks(userId);
       res.json({ message: "Repeating tasks processed successfully" });
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
+  // AI Insights API endpoint
+  app.post("/api/insights/generate", ensureAuth, async (req: any, res: any) => {
+    try {
+      const userId = req.user?.id;
+      
+      // Validate the request data
+      const { month, year } = z.object({
+        month: z.number().min(0).max(11),
+        year: z.number().min(2000).max(2100)
+      }).parse(req.body);
+      
+      // Get all tasks for the user
+      const allTasks = await storage.getAllTasks(userId);
+      
+      // Get category names for each task
+      const tasksWithCategoryNames = await Promise.all(
+        allTasks.map(async (task) => {
+          let categoryName = null;
+          if (task.categoryId) {
+            const category = await storage.getCategory(task.categoryId, userId);
+            categoryName = category?.name || null;
+          }
+          return {
+            ...task,
+            categoryName
+          };
+        })
+      );
+      
+      // Filter tasks for the specified month and year
+      const startDate = new Date(year, month, 1);
+      const endDate = new Date(year, month + 1, 0); // Last day of month
+      
+      // Filter completed tasks in the specified time range
+      const completedTasks = tasksWithCategoryNames.filter(task => {
+        if (!task.completed || !task.completedAt) return false;
+        
+        const completedAt = new Date(task.completedAt);
+        return (
+          completedAt >= startDate && 
+          completedAt <= endDate
+        );
+      });
+      
+      // Filter pending tasks (not completed and created before the end of the month)
+      const pendingTasks = tasksWithCategoryNames.filter(task => {
+        if (task.completed || task.archived) return false;
+        
+        const createdAt = new Date(task.createdAt);
+        return createdAt <= endDate;
+      });
+      
+      // Generate insights using OpenAI
+      const insights = await generateInsights(
+        completedTasks,
+        pendingTasks,
+        month,
+        year
+      );
+      
+      res.json({ insights });
     } catch (err) {
       handleError(err, res);
     }
