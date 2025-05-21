@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Archive, CheckCheck, ChevronLeft, ChevronRight, LogOut, Mail, Menu, Repeat, Settings, User } from "lucide-react";
+import { Archive, CheckCheck, ChevronLeft, ChevronRight, LogOut, Mail, Menu, Repeat, Settings, User, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -106,6 +106,14 @@ export default function Header() {
               )}>
                 <Mail className="h-5 w-5 mr-3" />
                 <span>Contact</span>
+              </Link>
+              
+              <Link href="/ai-insights" className={cn(
+                "flex items-center py-2 px-3 rounded-md transition-colors",
+                location === '/ai-insights' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+              )}>
+                <Sparkles className="h-5 w-5 mr-3" />
+                <span>AI Insights</span>
               </Link>
             </div>
             
@@ -252,6 +260,21 @@ export default function Header() {
                 {isSidebarCollapsed && <TooltipContent side="right">Contact</TooltipContent>}
               </Tooltip>
               {!isSidebarCollapsed && <span>Contact</span>}
+            </Link>
+            
+            <Link href="/ai-insights" className={cn(
+              "flex items-center py-2 px-3 rounded-md transition-colors",
+              location === '/ai-insights' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+            )}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={isSidebarCollapsed ? "mx-auto" : "mr-3"}>
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                </TooltipTrigger>
+                {isSidebarCollapsed && <TooltipContent side="right">AI Insights</TooltipContent>}
+              </Tooltip>
+              {!isSidebarCollapsed && <span>AI Insights</span>}
             </Link>
           </TooltipProvider>
         </div>
