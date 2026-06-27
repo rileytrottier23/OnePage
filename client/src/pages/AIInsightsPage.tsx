@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Sparkles, Loader2, Calendar, AlertTriangle, RefreshCw } from "lucide-react";
+import { Sparkles, Loader2, Calendar, AlertTriangle, RefreshCw, Clock } from "lucide-react";
 import Header from "@/components/Header";
 import DOMPurify from "dompurify";
 
@@ -33,11 +33,20 @@ function parseErrorMessage(raw: string): string {
   return raw || "Something went wrong while generating insights.";
 }
 
+function formatGeneratedAt(date: Date): string {
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
 export default function AIInsightsPage() {
   const { user } = useAuth();
   const [month, setMonth] = useState<string>(new Date().getMonth().toString());
   const [year, setYear] = useState<string>(new Date().getFullYear().toString());
-  const [insights, setInsights] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     const savedState = localStorage.getItem("sidebar-collapsed");
@@ -92,33 +101,66 @@ export default function AIInsightsPage() {
     { value: (currentYear - 2).toString(), label: (currentYear - 2).toString() }
   ];
 
+  const cachedInsightsQuery = useQuery<{ insights: string | null; generatedAt: string | null }>({
+    queryKey: ["/api/insights/cached", month, year],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/insights/cached?month=${month}&year=${year}`);
+      return res.json();
+    },
+    staleTime: 0,
+  });
+
+  const cachedInsights = cachedInsightsQuery.data?.insights ?? null;
+  const cachedGeneratedAt = cachedInsightsQuery.data?.generatedAt
+    ? new Date(cachedInsightsQuery.data.generatedAt)
+    : null;
+
   const generateInsightsMutation = useMutation({
     mutationFn: async ({ month, year }: { month: string; year: string }) => {
       const response = await apiRequest("POST", "/api/insights/generate", {
         month: parseInt(month),
         year: parseInt(year)
       });
-      return response.json();
+      return response.json() as Promise<{ insights: string; generatedAt: string }>;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       setErrorMessage(null);
-      setInsights(data.insights);
+      queryClient.setQueryData(
+        ["/api/insights/cached", variables.month, variables.year],
+        { insights: data.insights, generatedAt: data.generatedAt }
+      );
     },
     onError: (error: Error) => {
-      setInsights(null);
       setErrorMessage(parseErrorMessage(error.message));
     }
   });
 
   const handleGenerateInsights = () => {
-    setInsights(null);
     setErrorMessage(null);
     generateInsightsMutation.mutate({ month, year });
   };
 
-  const sanitizedInsights = insights
-    ? DOMPurify.sanitize(insights, { USE_PROFILES: { html: true } })
+  const handleMonthChange = (value: string) => {
+    setMonth(value);
+    setErrorMessage(null);
+    generateInsightsMutation.reset();
+  };
+
+  const handleYearChange = (value: string) => {
+    setYear(value);
+    setErrorMessage(null);
+    generateInsightsMutation.reset();
+  };
+
+  const displayInsights = cachedInsights;
+  const displayGeneratedAt = cachedGeneratedAt;
+  const isFromCache = !!(cachedInsights && !generateInsightsMutation.isPending && generateInsightsMutation.isIdle);
+
+  const sanitizedInsights = displayInsights
+    ? DOMPurify.sanitize(displayInsights, { USE_PROFILES: { html: true } })
     : null;
+
+  const isLoading = generateInsightsMutation.isPending || cachedInsightsQuery.isLoading;
 
   return (
     <div className="flex min-h-screen">
@@ -151,7 +193,7 @@ export default function AIInsightsPage() {
                 <div className="flex flex-col md:flex-row gap-4">
                   <div className="space-y-2 flex-1">
                     <Label htmlFor="month">Month</Label>
-                    <Select value={month} onValueChange={setMonth}>
+                    <Select value={month} onValueChange={handleMonthChange}>
                       <SelectTrigger id="month" className="w-full">
                         <SelectValue placeholder="Select month" />
                       </SelectTrigger>
@@ -165,7 +207,7 @@ export default function AIInsightsPage() {
 
                   <div className="space-y-2 flex-1">
                     <Label htmlFor="year">Year</Label>
-                    <Select value={year} onValueChange={setYear}>
+                    <Select value={year} onValueChange={handleYearChange}>
                       <SelectTrigger id="year" className="w-full">
                         <SelectValue placeholder="Select year" />
                       </SelectTrigger>
@@ -181,7 +223,7 @@ export default function AIInsightsPage() {
               <CardFooter className="flex justify-end">
                 <Button
                   onClick={handleGenerateInsights}
-                  disabled={generateInsightsMutation.isPending}
+                  disabled={isLoading}
                   className="gap-2"
                 >
                   {generateInsightsMutation.isPending ? (
@@ -189,10 +231,15 @@ export default function AIInsightsPage() {
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Generating...
                     </>
+                  ) : cachedInsightsQuery.isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
                   ) : (
                     <>
                       <Sparkles className="h-4 w-4" />
-                      Generate Insights
+                      {sanitizedInsights ? "Regenerate Insights" : "Generate Insights"}
                     </>
                   )}
                 </Button>
@@ -211,7 +258,7 @@ export default function AIInsightsPage() {
                       size="sm"
                       className="w-fit gap-2 border-destructive/50 text-destructive hover:bg-destructive/10"
                       onClick={handleGenerateInsights}
-                      disabled={generateInsightsMutation.isPending}
+                      disabled={isLoading}
                     >
                       <RefreshCw className="h-3.5 w-3.5" />
                       Try again
@@ -228,6 +275,15 @@ export default function AIInsightsPage() {
                     <Calendar className="h-5 w-5" />
                     Analysis for {months.find(m => m.value === month)?.label} {year}
                   </CardTitle>
+                  {displayGeneratedAt && (
+                    <CardDescription className="flex items-center gap-1.5 text-muted-foreground">
+                      <Clock className="h-3.5 w-3.5" />
+                      Generated on {formatGeneratedAt(displayGeneratedAt)}
+                      {isFromCache && (
+                        <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-sm">cached</span>
+                      )}
+                    </CardDescription>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="prose prose-invert max-w-none">
