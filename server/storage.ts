@@ -56,6 +56,7 @@ export interface IStorage {
   // AI Insights cache
   getInsightsCache(userId: number, month: number, year: number): Promise<{ insights: string; generatedAt: Date } | undefined>;
   setInsightsCache(userId: number, month: number, year: number, insights: string): Promise<void>;
+  deleteInsightsCache(userId: number, month: number, year: number): Promise<boolean>;
 
   // Session store for authentication
   sessionStore: session.Store;
@@ -96,6 +97,17 @@ export class DatabaseStorage implements IStorage {
         target: [insightsCache.userId, insightsCache.month, insightsCache.year],
         set: { insights, generatedAt: now }
       });
+  }
+
+  async deleteInsightsCache(userId: number, month: number, year: number): Promise<boolean> {
+    await db
+      .delete(insightsCache)
+      .where(and(
+        eq(insightsCache.userId, userId),
+        eq(insightsCache.month, month),
+        eq(insightsCache.year, year)
+      ));
+    return true;
   }
 
   async initializeDefaultCategories(userId?: number) {

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Sparkles, Loader2, Calendar, AlertTriangle, RefreshCw, Clock } from "lucide-react";
+import { Sparkles, Loader2, Calendar, AlertTriangle, RefreshCw, Clock, Trash2 } from "lucide-react";
 import Header from "@/components/Header";
 import DOMPurify from "dompurify";
 
@@ -132,6 +132,21 @@ export default function AIInsightsPage() {
     },
     onError: (error: Error) => {
       setErrorMessage(parseErrorMessage(error.message));
+    }
+  });
+
+  const clearCacheMutation = useMutation({
+    mutationFn: async ({ month, year }: { month: string; year: string }) => {
+      const response = await apiRequest("DELETE", `/api/insights/cached?month=${month}&year=${year}`);
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.setQueryData(
+        ["/api/insights/cached", variables.month, variables.year],
+        { insights: null, generatedAt: null }
+      );
+      generateInsightsMutation.reset();
+      setErrorMessage(null);
     }
   });
 
@@ -276,12 +291,29 @@ export default function AIInsightsPage() {
                     Analysis for {months.find(m => m.value === month)?.label} {year}
                   </CardTitle>
                   {displayGeneratedAt && (
-                    <CardDescription className="flex items-center gap-1.5 text-muted-foreground">
-                      <Clock className="h-3.5 w-3.5" />
-                      Generated on {formatGeneratedAt(displayGeneratedAt)}
-                      {isFromCache && (
-                        <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-sm">cached</span>
-                      )}
+                    <CardDescription className="flex items-center gap-2 text-muted-foreground flex-wrap">
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        Generated on {formatGeneratedAt(displayGeneratedAt)}
+                        {isFromCache && (
+                          <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-sm">cached</span>
+                        )}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 gap-1 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => clearCacheMutation.mutate({ month, year })}
+                        disabled={clearCacheMutation.isPending}
+                        title="Clear cached result"
+                      >
+                        {clearCacheMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3" />
+                        )}
+                        Clear
+                      </Button>
                     </CardDescription>
                   )}
                 </CardHeader>

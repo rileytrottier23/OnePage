@@ -528,6 +528,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete AI Insights cache endpoint
+  app.delete("/api/insights/cached", ensureAuth, async (req: any, res: any) => {
+    try {
+      const userId = req.user?.id;
+      const { month, year } = z.object({
+        month: z.coerce.number().min(0).max(11),
+        year: z.coerce.number().min(2000).max(2100)
+      }).parse(req.query);
+
+      await storage.deleteInsightsCache(userId, month, year);
+      res.json({ message: "Cache cleared successfully" });
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
   // AI Insights API endpoint
   app.post("/api/insights/generate", ensureAuth, async (req: any, res: any) => {
     try {
