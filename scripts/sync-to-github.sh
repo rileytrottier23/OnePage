@@ -27,8 +27,39 @@ set -euo pipefail
 
 REPO="rileytrottier23/OnePage"
 BRANCH="main"
+STATUS_FILE=".sync-status.json"
+
+# ---------------------------------------------------------------------------
+# Status writer — called at every exit path to record the result in-app
+# ---------------------------------------------------------------------------
+write_status() {
+  local status="$1"      # success | failure | up-to-date
+  local sha="$2"         # commit SHA (may be empty)
+  local error_msg="$3"   # human-readable error (empty on success)
+
+  local timestamp
+  timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+  local actions_url="https://github.com/${REPO}/actions"
+
+  # Escape double-quotes in the error message for safe JSON embedding
+  local safe_error
+  safe_error=$(printf '%s' "$error_msg" | sed 's/\\/\\\\/g; s/"/\\"/g; s/$/\\n/g' | tr -d '\n' | sed 's/\\n$//')
+
+  cat > "$STATUS_FILE" <<EOF
+{
+  "status": "${status}",
+  "timestamp": "${timestamp}",
+  "sha": "${sha}",
+  "error": "${safe_error}",
+  "actionsUrl": "${actions_url}"
+}
+EOF
+  echo "Deploy status written to ${STATUS_FILE} (status=${status})"
+}
 
 if [ -z "${GITHUB_TOKEN:-}" ]; then
+  write_status "failure" "" "GITHUB_TOKEN secret is not set. Add it in Replit's Secrets panel (Settings → Secrets) as GITHUB_TOKEN."
   echo "ERROR: GITHUB_TOKEN secret is not set."
   echo "Add it in Replit's Secrets panel (Settings → Secrets) as GITHUB_TOKEN."
   exit 1
@@ -44,6 +75,7 @@ TOKEN_CHECK_STATUS=$(curl -s -o /tmp/gh-token-check.json -w "%{http_code}" \
   "https://api.github.com/user")
 
 if [ "$TOKEN_CHECK_STATUS" -eq 401 ] || [ "$TOKEN_CHECK_STATUS" -eq 403 ]; then
+  write_status "failure" "" "GITHUB_TOKEN is invalid or expired (HTTP ${TOKEN_CHECK_STATUS}). Go to https://github.com/settings/tokens and generate a new token with repo scope, then update the GITHUB_TOKEN secret in Replit."
   echo ""
   echo "ERROR: GITHUB_TOKEN is invalid or expired (HTTP ${TOKEN_CHECK_STATUS})."
   echo ""
@@ -93,11 +125,13 @@ echo "  Common base: ${BASE}"
 if [ "$LOCAL" = "$REMOTE" ]; then
   # Case 1: nothing to do
   echo "Already up-to-date with remote. Skipping push."
+  write_status "up-to-date" "${LOCAL}" ""
 
 elif [ "$BASE" = "$REMOTE" ]; then
   # Case 2: local is strictly ahead of remote — safe fast-forward
   echo "Local is ahead of remote. Pushing (fast-forward)..."
   if ! git push --force-with-lease origin "${BRANCH}"; then
+    write_status "failure" "${LOCAL}" "Push rejected by GitHub (--force-with-lease mismatch). Another push landed on remote between our fetch and this push. Re-run sync to fetch the new state and retry."
     echo ""
     echo "ERROR: Push rejected by GitHub (--force-with-lease mismatch)."
     echo "  Another push landed on remote between our fetch and this push."
@@ -110,6 +144,7 @@ elif [ "$BASE" = "$LOCAL" ]; then
   # Case 3: remote is strictly ahead — rebase then push
   echo "Remote has commits that are not in local. Rebasing onto origin/${BRANCH}..."
   if ! git rebase "origin/${BRANCH}"; then
+    write_status "failure" "${LOCAL}" "Rebase onto origin/${BRANCH} produced conflicts. Resolve conflicts manually, then re-run sync."
     echo ""
     echo "ERROR: Rebase onto origin/${BRANCH} produced conflicts."
     echo "  This should not happen in normal automated sync."
@@ -120,6 +155,7 @@ elif [ "$BASE" = "$LOCAL" ]; then
   fi
   echo "Rebase succeeded. Pushing..."
   if ! git push --force-with-lease origin "${BRANCH}"; then
+    write_status "failure" "${LOCAL}" "Push rejected by GitHub (--force-with-lease mismatch). Another push landed on remote between our rebase and this push. Re-run sync to fetch the new state and retry."
     echo ""
     echo "ERROR: Push rejected by GitHub (--force-with-lease mismatch)."
     echo "  Another push landed on remote between our rebase and this push."
@@ -130,6 +166,7 @@ elif [ "$BASE" = "$LOCAL" ]; then
 
 else
   # Case 4: histories have diverged — loud failure, no silent force-push
+  write_status "failure" "${LOCAL}" "Local and remote histories have DIVERGED. Local: ${LOCAL}, Remote: ${REMOTE}, Common base: ${BASE}. Two separate push paths wrote to GitHub main concurrently. Human intervention required."
   echo ""
   echo "ERROR: Local and remote histories have DIVERGED — cannot fast-forward."
   echo ""
@@ -168,6 +205,7 @@ HTTP_STATUS=$(curl -s -o /tmp/gh-dispatch-response.json -w "%{http_code}" \
   -d "{\"event_type\":\"replit-deploy\",\"client_payload\":{\"sha\":\"${SHA}\",\"ref\":\"${REF}\"}}")
 
 if [ "$HTTP_STATUS" -eq 401 ] || [ "$HTTP_STATUS" -eq 403 ]; then
+  write_status "failure" "${SHA}" "repository_dispatch rejected (HTTP ${HTTP_STATUS}) — GITHUB_TOKEN is invalid or expired. Update GITHUB_TOKEN in Replit's Secrets panel."
   echo ""
   echo "ERROR: repository_dispatch rejected (HTTP ${HTTP_STATUS}) — GITHUB_TOKEN is invalid or expired."
   echo "  Update GITHUB_TOKEN in Replit's Secrets panel."
@@ -178,9 +216,11 @@ fi
 if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
   echo "repository_dispatch sent (HTTP ${HTTP_STATUS})."
 else
+  write_status "failure" "${SHA}" "repository_dispatch returned unexpected HTTP ${HTTP_STATUS}."
   echo "WARNING: repository_dispatch returned HTTP ${HTTP_STATUS}."
   cat /tmp/gh-dispatch-response.json 2>/dev/null || true
   exit 1
 fi
 
+write_status "success" "${SHA}" ""
 echo "Done. GitHub repo is now up-to-date at ${SHA}."
