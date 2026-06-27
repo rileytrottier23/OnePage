@@ -2,13 +2,33 @@
 # Pushes the current Replit commit to GitHub and dispatches a repository_dispatch event.
 # Requires GITHUB_TOKEN to be set as a Replit secret.
 # Usage: bash scripts/sync-to-github.sh
+#
+# Push safety model
+# -----------------
+# Before every push this script fetches the remote branch and classifies the
+# relationship between local HEAD and origin/<BRANCH>:
+#
+#   1. Already up-to-date  → nothing to do, exit 0.
+#   2. Local is strictly ahead  → safe fast-forward; push with --force-with-lease
+#      so a race between fetch and push is caught and rejected cleanly.
+#   3. Remote is strictly ahead  → rebase local onto remote, then push with
+#      --force-with-lease.  This is the normal case when a post-merge sync runs
+#      right after a deploy-build sync.
+#   4. Histories have diverged  → LOUD FAILURE.  Two push paths wrote to
+#      GitHub main concurrently.  Human intervention required; the script prints
+#      both HEADs and the common ancestor to make triage easier.
+#
+# Using --force-with-lease on every push means that even if two concurrent
+# script instances both pass the pre-push fetch check, only the first one that
+# actually reaches GitHub wins; the second sees the lease mismatch and fails
+# with a clear error rather than silently creating a fork.
 
-set -e
+set -euo pipefail
 
 REPO="rileytrottier23/OnePage"
 BRANCH="main"
 
-if [ -z "$GITHUB_TOKEN" ]; then
+if [ -z "${GITHUB_TOKEN:-}" ]; then
   echo "ERROR: GITHUB_TOKEN secret is not set."
   echo "Add it in Replit's Secrets panel (Settings → Secrets) as GITHUB_TOKEN."
   exit 1
@@ -49,35 +69,85 @@ fi
 echo "Token OK (HTTP ${TOKEN_CHECK_STATUS})."
 
 # ---------------------------------------------------------------------------
-# Configure git and push
+# Configure git remote
 # ---------------------------------------------------------------------------
 echo "Configuring git..."
 git config user.email "replit-deploy@users.noreply.github.com"
 git config user.name "Replit Deploy Bot"
 git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
 
-echo "Pushing ${BRANCH} to GitHub..."
-PUSH_OUTPUT=$(git push origin "${BRANCH}" 2>&1) || PUSH_EXIT=$?
+# ---------------------------------------------------------------------------
+# Fetch remote state — always do this before any push decision
+# ---------------------------------------------------------------------------
+echo "Fetching remote state from origin/${BRANCH}..."
+git fetch origin "${BRANCH}"
 
-if [ "${PUSH_EXIT:-0}" -ne 0 ]; then
-  # Surface auth errors with a targeted message
-  if echo "$PUSH_OUTPUT" | grep -qiE "invalid credentials|authentication failed|403|401"; then
+LOCAL=$(git rev-parse HEAD)
+REMOTE=$(git rev-parse "origin/${BRANCH}")
+BASE=$(git merge-base HEAD "origin/${BRANCH}")
+
+echo "  Local HEAD : ${LOCAL}"
+echo "  Remote HEAD: ${REMOTE}"
+echo "  Common base: ${BASE}"
+
+if [ "$LOCAL" = "$REMOTE" ]; then
+  # Case 1: nothing to do
+  echo "Already up-to-date with remote. Skipping push."
+
+elif [ "$BASE" = "$REMOTE" ]; then
+  # Case 2: local is strictly ahead of remote — safe fast-forward
+  echo "Local is ahead of remote. Pushing (fast-forward)..."
+  if ! git push --force-with-lease origin "${BRANCH}"; then
     echo ""
-    echo "ERROR: git push rejected — GITHUB_TOKEN authentication failed."
+    echo "ERROR: Push rejected by GitHub (--force-with-lease mismatch)."
+    echo "  Another push landed on remote between our fetch and this push."
+    echo "  Re-run sync to fetch the new state and retry."
     echo ""
-    echo "  The token may have expired or had its permissions revoked."
-    echo "  Update GITHUB_TOKEN in Replit's Secrets panel (padlock icon → Secrets)."
-    echo ""
-    echo "  Raw git output:"
-    echo "$PUSH_OUTPUT"
     exit 1
   fi
 
-  # Not an auth error — try rebase + retry
-  echo "Fast-forward push failed; pulling remote changes and retrying..."
-  echo "$PUSH_OUTPUT"
-  git pull --rebase origin "${BRANCH}"
-  git push origin "${BRANCH}"
+elif [ "$BASE" = "$LOCAL" ]; then
+  # Case 3: remote is strictly ahead — rebase then push
+  echo "Remote has commits that are not in local. Rebasing onto origin/${BRANCH}..."
+  if ! git rebase "origin/${BRANCH}"; then
+    echo ""
+    echo "ERROR: Rebase onto origin/${BRANCH} produced conflicts."
+    echo "  This should not happen in normal automated sync."
+    echo "  Resolve conflicts manually, then re-run sync."
+    echo ""
+    git rebase --abort 2>/dev/null || true
+    exit 1
+  fi
+  echo "Rebase succeeded. Pushing..."
+  if ! git push --force-with-lease origin "${BRANCH}"; then
+    echo ""
+    echo "ERROR: Push rejected by GitHub (--force-with-lease mismatch)."
+    echo "  Another push landed on remote between our rebase and this push."
+    echo "  Re-run sync to fetch the new state and retry."
+    echo ""
+    exit 1
+  fi
+
+else
+  # Case 4: histories have diverged — loud failure, no silent force-push
+  echo ""
+  echo "ERROR: Local and remote histories have DIVERGED — cannot fast-forward."
+  echo ""
+  echo "  Local HEAD : ${LOCAL}"
+  echo "  Remote HEAD: ${REMOTE}"
+  echo "  Common base: ${BASE}"
+  echo ""
+  echo "  This means two separate push paths wrote to GitHub main concurrently"
+  echo "  (e.g. a deploy-build sync and a post-merge sync raced each other)."
+  echo ""
+  echo "  To recover:"
+  echo "  1. Decide which history is authoritative (usually the Replit local branch)."
+  echo "  2. If local is correct, reset remote:  git push --force origin ${BRANCH}"
+  echo "     (only do this after confirming no one else has branched off the remote)."
+  echo "  3. If remote is correct, reset local:  git reset --hard origin/${BRANCH}"
+  echo "  4. Re-run sync once histories are reconciled."
+  echo ""
+  exit 1
 fi
 
 echo "Push succeeded."
