@@ -3,6 +3,7 @@ import {
   categories, 
   users, 
   repeatingTasks,
+  insightsCache,
   type Task, 
   type InsertTask, 
   type Category, 
@@ -65,7 +66,6 @@ const PostgresSessionStore = connectPg(session);
 // Database storage implementation
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
-  private insightsCache: Map<string, { insights: string; generatedAt: Date }> = new Map();
 
   constructor() {
     this.sessionStore = new PostgresSessionStore({ 
@@ -75,11 +75,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getInsightsCache(userId: number, month: number, year: number): Promise<{ insights: string; generatedAt: Date } | undefined> {
-    return this.insightsCache.get(`${userId}-${month}-${year}`);
+    const [row] = await db
+      .select()
+      .from(insightsCache)
+      .where(and(
+        eq(insightsCache.userId, userId),
+        eq(insightsCache.month, month),
+        eq(insightsCache.year, year)
+      ));
+    if (!row) return undefined;
+    return { insights: row.insights, generatedAt: row.generatedAt };
   }
 
   async setInsightsCache(userId: number, month: number, year: number, insights: string): Promise<void> {
-    this.insightsCache.set(`${userId}-${month}-${year}`, { insights, generatedAt: new Date() });
+    const now = new Date();
+    await db
+      .insert(insightsCache)
+      .values({ userId, month, year, insights, generatedAt: now })
+      .onConflictDoUpdate({
+        target: [insightsCache.userId, insightsCache.month, insightsCache.year],
+        set: { insights, generatedAt: now }
+      });
   }
 
   async initializeDefaultCategories(userId?: number) {

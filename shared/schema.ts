@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, time } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, time, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -61,6 +61,20 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// AI Insights Cache Schema
+export const insightsCache = pgTable("insights_cache", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  month: integer("month").notNull(),
+  year: integer("year").notNull(),
+  insights: text("insights").notNull(),
+  generatedAt: timestamp("generated_at").notNull().defaultNow(),
+}, (table) => ({
+  userMonthYearUnique: unique().on(table.userId, table.month, table.year),
+}));
+
+export type InsightsCache = typeof insightsCache.$inferSelect;
 
 // Repeating Tasks Schema
 export const repeatingTasks = pgTable("repeating_tasks", {
