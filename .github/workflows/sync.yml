@@ -1,0 +1,47 @@
+name: Sync from Replit
+
+on:
+  repository_dispatch:
+    types: [replit-deploy]
+  workflow_dispatch:
+
+jobs:
+  verify-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Verify commit matches deployed SHA
+        run: |
+          CURRENT_SHA=$(git rev-parse HEAD)
+          echo "HEAD on GitHub: ${CURRENT_SHA}"
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            EXPECTED_SHA="${{ github.event.client_payload.sha }}"
+            echo "Expected SHA from Replit deploy: ${EXPECTED_SHA}"
+            if [ "${CURRENT_SHA}" = "${EXPECTED_SHA}" ]; then
+              echo "OK: GitHub is in sync with Replit."
+            else
+              echo "MISMATCH: GitHub HEAD (${CURRENT_SHA}) does not match deployed SHA (${EXPECTED_SHA})."
+              exit 1
+            fi
+          else
+            echo "Manually triggered. Current HEAD: ${CURRENT_SHA}"
+          fi
+
+      - name: Install dependencies and build
+        run: |
+          npm ci
+          npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Confirm build artifact exists
+        run: |
+          if [ ! -f dist/index.js ]; then
+            echo "ERROR: dist/index.js not found after build."
+            exit 1
+          fi
+          echo "Build artifact confirmed: dist/index.js exists."
