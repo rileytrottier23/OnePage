@@ -14,6 +14,7 @@ import ContactPage from "@/pages/contact-page";
 import LandingPage from "@/pages/LandingPage";
 import RepeatingTasksPage from "@/pages/RepeatingTasksPage";
 import AIInsightsPage from "@/pages/AIInsightsPage";
+import DeployStatusPage from "@/pages/DeployStatusPage";
 
 function Router() {
   return (
@@ -23,6 +24,7 @@ function Router() {
       <ProtectedRoute path="/archive" component={Archive} />
       <ProtectedRoute path="/repeating" component={RepeatingTasksPage} />
       <ProtectedRoute path="/ai-insights" component={AIInsightsPage} />
+      <ProtectedRoute path="/deploy-status" component={DeployStatusPage} />
       <Route path="/about" component={About} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/contact" component={ContactPage} />
