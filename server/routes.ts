@@ -508,6 +508,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Insights cache endpoint
+  app.get("/api/insights/cached", ensureAuth, async (req: any, res: any) => {
+    try {
+      const userId = req.user?.id;
+      const { month, year } = z.object({
+        month: z.coerce.number().min(0).max(11),
+        year: z.coerce.number().min(2000).max(2100)
+      }).parse(req.query);
+
+      const cached = await storage.getInsightsCache(userId, month, year);
+      if (cached) {
+        res.json({ insights: cached.insights, generatedAt: cached.generatedAt });
+      } else {
+        res.json({ insights: null, generatedAt: null });
+      }
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
   // AI Insights API endpoint
   app.post("/api/insights/generate", ensureAuth, async (req: any, res: any) => {
     try {
@@ -568,7 +588,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         year
       );
       
-      res.json({ insights });
+      // Save to cache for this user/month/year
+      await storage.setInsightsCache(userId, month, year, insights);
+      const cached = await storage.getInsightsCache(userId, month, year);
+      
+      res.json({ insights, generatedAt: cached?.generatedAt ?? new Date() });
     } catch (err) {
       handleError(err, res);
     }
