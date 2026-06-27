@@ -609,8 +609,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cached = await storage.getInsightsCache(userId, month, year);
       
       res.json({ insights, generatedAt: cached?.generatedAt ?? new Date() });
-    } catch (err) {
-      handleError(err, res);
+    } catch (err: any) {
+      if (err instanceof ZodError) {
+        return res.status(400).json({ message: err.errors });
+      }
+      const msg: string = err?.message ?? "Internal server error";
+      if (msg.startsWith("AI_KEY_MISSING:") || msg.startsWith("AI_SERVICE_DOWN:")) {
+        return res.status(503).json({ message: msg });
+      }
+      if (msg.startsWith("AI_KEY_INVALID:")) {
+        return res.status(401).json({ message: msg });
+      }
+      if (msg.startsWith("AI_RATE_LIMITED:") || msg.startsWith("AI_QUOTA_EXCEEDED:")) {
+        return res.status(429).json({ message: msg });
+      }
+      console.error("API Error:", err);
+      return res.status(500).json({ message: msg });
     }
   });
 
