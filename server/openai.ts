@@ -14,33 +14,37 @@ export async function generateInsights(
   month: number,
   year: number
 ): Promise<string> {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("AI_KEY_MISSING: No OpenAI API key is configured. Please add your OPENAI_API_KEY to the environment.");
+  }
+
+  // Format month name
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const monthName = monthNames[month];
+
+  // Prepare the task summary for the AI
+  const taskSummary = {
+    completedTasks: completedTasks.map(task => ({
+      text: task.text,
+      categoryName: task.categoryName || "Uncategorized",
+      completedAt: task.completedAt,
+      createdAt: task.createdAt
+    })),
+    pendingTasks: pendingTasks.map(task => ({
+      text: task.text,
+      categoryName: task.categoryName || "Uncategorized",
+      createdAt: task.createdAt
+    })),
+    timeframe: {
+      month: monthName,
+      year: year
+    }
+  };
+
   try {
-    // Format month name
-    const monthNames = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
-    ];
-    const monthName = monthNames[month];
-
-    // Prepare the task summary for the AI
-    const taskSummary = {
-      completedTasks: completedTasks.map(task => ({
-        text: task.text,
-        categoryName: task.categoryName || "Uncategorized",
-        completedAt: task.completedAt,
-        createdAt: task.createdAt
-      })),
-      pendingTasks: pendingTasks.map(task => ({
-        text: task.text,
-        categoryName: task.categoryName || "Uncategorized",
-        createdAt: task.createdAt
-      })),
-      timeframe: {
-        month: monthName,
-        year: year
-      }
-    };
-
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -65,8 +69,25 @@ export async function generateInsights(
 
     // Return the insight text from the AI response
     return response.choices[0].message.content || "No insights generated. Please try again.";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating insights with OpenAI:", error);
-    throw new Error("Failed to generate insights. Please try again later.");
+
+    const status = error?.status ?? error?.response?.status;
+    const code = error?.code ?? error?.error?.code;
+
+    if (status === 401 || code === "invalid_api_key") {
+      throw new Error("AI_KEY_INVALID: The OpenAI API key is invalid or has been revoked. Please update your OPENAI_API_KEY.");
+    }
+    if (status === 429) {
+      if (code === "insufficient_quota") {
+        throw new Error("AI_QUOTA_EXCEEDED: Your OpenAI account has exceeded its usage quota. Please check your billing details.");
+      }
+      throw new Error("AI_RATE_LIMITED: OpenAI is receiving too many requests right now. Please wait a moment and try again.");
+    }
+    if (status === 503 || status === 502 || status === 500) {
+      throw new Error("AI_SERVICE_DOWN: The OpenAI service is temporarily unavailable. Please try again in a few minutes.");
+    }
+
+    throw new Error("AI_ERROR: Failed to generate insights. Please try again later.");
   }
 }

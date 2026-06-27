@@ -6,23 +6,44 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Loader2, Calendar } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Sparkles, Loader2, Calendar, AlertTriangle, RefreshCw } from "lucide-react";
 import Header from "@/components/Header";
+import DOMPurify from "dompurify";
+
+function parseErrorMessage(raw: string): string {
+  if (raw.startsWith("AI_KEY_MISSING:")) {
+    return raw.replace("AI_KEY_MISSING:", "").trim();
+  }
+  if (raw.startsWith("AI_KEY_INVALID:")) {
+    return raw.replace("AI_KEY_INVALID:", "").trim();
+  }
+  if (raw.startsWith("AI_QUOTA_EXCEEDED:")) {
+    return raw.replace("AI_QUOTA_EXCEEDED:", "").trim();
+  }
+  if (raw.startsWith("AI_RATE_LIMITED:")) {
+    return raw.replace("AI_RATE_LIMITED:", "").trim();
+  }
+  if (raw.startsWith("AI_SERVICE_DOWN:")) {
+    return raw.replace("AI_SERVICE_DOWN:", "").trim();
+  }
+  if (raw.startsWith("AI_ERROR:")) {
+    return raw.replace("AI_ERROR:", "").trim();
+  }
+  return raw || "Something went wrong while generating insights.";
+}
 
 export default function AIInsightsPage() {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [month, setMonth] = useState<string>(new Date().getMonth().toString());
   const [year, setYear] = useState<string>(new Date().getFullYear().toString());
   const [insights, setInsights] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    // Check localStorage for saved preference, default to false (expanded)
     const savedState = localStorage.getItem("sidebar-collapsed");
     return savedState ? JSON.parse(savedState) : false;
   });
-  
-  // Listen for changes to sidebar state in localStorage
+
   useEffect(() => {
     const handleStorageChange = () => {
       const savedState = localStorage.getItem("sidebar-collapsed");
@@ -30,11 +51,9 @@ export default function AIInsightsPage() {
         setIsSidebarCollapsed(JSON.parse(savedState));
       }
     };
-    
-    // Check for changes to localStorage
+
     window.addEventListener('storage', handleStorageChange);
-    
-    // Check periodically (not ideal but works as a fallback)
+
     const interval = setInterval(() => {
       const savedState = localStorage.getItem("sidebar-collapsed");
       if (savedState !== null) {
@@ -44,14 +63,13 @@ export default function AIInsightsPage() {
         }
       }
     }, 500);
-    
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
     };
   }, [isSidebarCollapsed]);
 
-  // Get all months for the dropdown
   const months = [
     { value: "0", label: "January" },
     { value: "1", label: "February" },
@@ -67,7 +85,6 @@ export default function AIInsightsPage() {
     { value: "11", label: "December" }
   ];
 
-  // Get years (current year and 2 years back)
   const currentYear = new Date().getFullYear();
   const years = [
     { value: currentYear.toString(), label: currentYear.toString() },
@@ -77,36 +94,37 @@ export default function AIInsightsPage() {
 
   const generateInsightsMutation = useMutation({
     mutationFn: async ({ month, year }: { month: string; year: string }) => {
-      const response = await apiRequest("POST", "/api/insights/generate", { 
-        month: parseInt(month), 
-        year: parseInt(year) 
+      const response = await apiRequest("POST", "/api/insights/generate", {
+        month: parseInt(month),
+        year: parseInt(year)
       });
       return response.json();
     },
     onSuccess: (data) => {
+      setErrorMessage(null);
       setInsights(data.insights);
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error generating insights",
-        description: error.message,
-        variant: "destructive"
-      });
+      setInsights(null);
+      setErrorMessage(parseErrorMessage(error.message));
     }
   });
 
-  // Handle form submission
   const handleGenerateInsights = () => {
     setInsights(null);
+    setErrorMessage(null);
     generateInsightsMutation.mutate({ month, year });
   };
 
+  const sanitizedInsights = insights
+    ? DOMPurify.sanitize(insights, { USE_PROFILES: { html: true } })
+    : null;
+
   return (
     <div className="flex min-h-screen">
-      {/* Main content area - shifted to right to make room for side menu on desktop */}
       <div className={`flex-1 transition-all duration-300 ${
-            isSidebarCollapsed ? 'md:ml-[70px]' : 'md:ml-[240px]'
-          }`}>
+        isSidebarCollapsed ? 'md:ml-[70px]' : 'md:ml-[240px]'
+      }`}>
         <div className="py-6 px-4 sticky top-0 bg-background z-10">
           <Header />
         </div>
@@ -116,7 +134,7 @@ export default function AIInsightsPage() {
             <Sparkles className="h-8 w-8 text-primary" />
             AI Productivity Insights
           </h1>
-          
+
           <p className="text-muted-foreground mb-6">
             Generate AI-powered insights and recommendations based on your task completion patterns to boost your productivity.
           </p>
@@ -133,10 +151,7 @@ export default function AIInsightsPage() {
                 <div className="flex flex-col md:flex-row gap-4">
                   <div className="space-y-2 flex-1">
                     <Label htmlFor="month">Month</Label>
-                    <Select
-                      value={month}
-                      onValueChange={setMonth}
-                    >
+                    <Select value={month} onValueChange={setMonth}>
                       <SelectTrigger id="month" className="w-full">
                         <SelectValue placeholder="Select month" />
                       </SelectTrigger>
@@ -147,13 +162,10 @@ export default function AIInsightsPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="space-y-2 flex-1">
                     <Label htmlFor="year">Year</Label>
-                    <Select
-                      value={year}
-                      onValueChange={setYear}
-                    >
+                    <Select value={year} onValueChange={setYear}>
                       <SelectTrigger id="year" className="w-full">
                         <SelectValue placeholder="Select year" />
                       </SelectTrigger>
@@ -167,7 +179,7 @@ export default function AIInsightsPage() {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end">
-                <Button 
+                <Button
                   onClick={handleGenerateInsights}
                   disabled={generateInsightsMutation.isPending}
                   className="gap-2"
@@ -186,8 +198,30 @@ export default function AIInsightsPage() {
                 </Button>
               </CardFooter>
             </Card>
-            
-            {insights && (
+
+            {errorMessage && (
+              <div className="col-span-1 md:col-span-4">
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Could not generate insights</AlertTitle>
+                  <AlertDescription className="mt-1 flex flex-col gap-3">
+                    <span>{errorMessage}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-fit gap-2 border-destructive/50 text-destructive hover:bg-destructive/10"
+                      onClick={handleGenerateInsights}
+                      disabled={generateInsightsMutation.isPending}
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Try again
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+
+            {sanitizedInsights && (
               <Card className="col-span-1 md:col-span-4">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -197,7 +231,7 @@ export default function AIInsightsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="prose prose-invert max-w-none">
-                    <div dangerouslySetInnerHTML={{ __html: insights }} />
+                    <div dangerouslySetInnerHTML={{ __html: sanitizedInsights }} />
                   </div>
                 </CardContent>
               </Card>
