@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Archive, CheckCheck, ChevronLeft, ChevronRight, LogOut, Mail, Menu, Repeat, Settings, User, Sparkles } from "lucide-react";
+import { Archive, CheckCheck, ChevronLeft, ChevronRight, LogOut, Mail, Menu, Repeat, Settings, User, Sparkles, GitBranch } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -114,6 +114,14 @@ export default function Header() {
               )}>
                 <Sparkles className="h-5 w-5 mr-3" />
                 <span>AI Insights</span>
+              </Link>
+
+              <Link href="/deploy-status" className={cn(
+                "flex items-center py-2 px-3 rounded-md transition-colors",
+                location === '/deploy-status' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+              )}>
+                <GitBranch className="h-5 w-5 mr-3" />
+                <span>Deploy Status</span>
               </Link>
             </div>
             
@@ -275,6 +283,21 @@ export default function Header() {
                 {isSidebarCollapsed && <TooltipContent side="right">AI Insights</TooltipContent>}
               </Tooltip>
               {!isSidebarCollapsed && <span>AI Insights</span>}
+            </Link>
+
+            <Link href="/deploy-status" className={cn(
+              "flex items-center py-2 px-3 rounded-md transition-colors",
+              location === '/deploy-status' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+            )}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={isSidebarCollapsed ? "mx-auto" : "mr-3"}>
+                    <GitBranch className="h-5 w-5" />
+                  </div>
+                </TooltipTrigger>
+                {isSidebarCollapsed && <TooltipContent side="right">Deploy Status</TooltipContent>}
+              </Tooltip>
+              {!isSidebarCollapsed && <span>Deploy Status</span>}
             </Link>
           </TooltipProvider>
         </div>
