@@ -6,6 +6,8 @@ import { z } from "zod";
 import { ZodError } from "zod";
 import { setupAuth } from "./auth";
 import { generateInsights } from "./openai";
+import fs from "fs";
+import path from "path";
 
 // Function to schedule daily tasks like archiving completed tasks and processing repeating tasks
 function setupScheduledTasks() {
@@ -528,6 +530,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete AI Insights cache endpoint
+  app.delete("/api/insights/cached", ensureAuth, async (req: any, res: any) => {
+    try {
+      const userId = req.user?.id;
+      const { month, year } = z.object({
+        month: z.coerce.number().min(0).max(11),
+        year: z.coerce.number().min(2000).max(2100)
+      }).parse(req.query);
+
+      await storage.deleteInsightsCache(userId, month, year);
+      res.json({ message: "Cache cleared successfully" });
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
   // AI Insights API endpoint
   app.post("/api/insights/generate", ensureAuth, async (req: any, res: any) => {
     try {
@@ -593,8 +611,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cached = await storage.getInsightsCache(userId, month, year);
       
       res.json({ insights, generatedAt: cached?.generatedAt ?? new Date() });
+    } catch (err: any) {
+      if (err instanceof ZodError) {
+        return res.status(400).json({ message: err.errors });
+      }
+      const msg: string = err?.message ?? "Internal server error";
+      if (msg.startsWith("AI_KEY_MISSING:") || msg.startsWith("AI_SERVICE_DOWN:")) {
+        return res.status(503).json({ message: msg });
+      }
+      if (msg.startsWith("AI_KEY_INVALID:")) {
+        return res.status(401).json({ message: msg });
+      }
+      if (msg.startsWith("AI_RATE_LIMITED:") || msg.startsWith("AI_QUOTA_EXCEEDED:")) {
+        return res.status(429).json({ message: msg });
+      }
+      console.error("API Error:", err);
+      return res.status(500).json({ message: msg });
+    }
+  });
+
+  // Deploy status endpoint — reads the JSON file written by sync-to-github.sh
+  app.get("/api/deploy-status", ensureAuth, (req: any, res: any) => {
+    const statusFile = path.resolve(process.cwd(), ".sync-status.json");
+    try {
+      if (!fs.existsSync(statusFile)) {
+        return res.json({
+          status: "unknown",
+          timestamp: null,
+          sha: null,
+          error: null,
+          actionsUrl: null,
+        });
+      }
+      const raw = fs.readFileSync(statusFile, "utf8");
+      const parsed = JSON.parse(raw);
+      return res.json({
+        status: parsed.status ?? "unknown",
+        timestamp: parsed.timestamp ?? null,
+        sha: parsed.sha ?? null,
+        error: parsed.error ?? null,
+        actionsUrl: parsed.actionsUrl ?? null,
+      });
     } catch (err) {
-      handleError(err, res);
+      console.error("Failed to read deploy status file:", err);
+      return res.status(500).json({ message: "Could not read deploy status" });
     }
   });
 
