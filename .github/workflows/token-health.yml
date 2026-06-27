@@ -1,0 +1,84 @@
+name: Token Health Check
+
+# Runs weekly to verify GH_REPLIT_TOKEN (the PAT used by Replit's sync script)
+# is still valid before it can expire silently.
+#
+# Setup:
+#   1. Copy your GITHUB_TOKEN value from Replit Secrets.
+#   2. Add it as a GitHub Actions secret named GH_REPLIT_TOKEN:
+#      Repository → Settings → Secrets and variables → Actions → New repository secret.
+#   3. The check will run every Monday at 09:00 UTC and fail visibly if the
+#      token has expired or been revoked, giving you time to rotate it.
+
+on:
+  schedule:
+    # Every Monday at 09:00 UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  check-token:
+    name: Verify Replit sync token is valid
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check GH_REPLIT_TOKEN secret is configured
+        run: |
+          if [ -z "${{ secrets.GH_REPLIT_TOKEN }}" ]; then
+            echo "::warning::GH_REPLIT_TOKEN is not set as a GitHub Actions secret."
+            echo "Add it under Repository → Settings → Secrets and variables → Actions."
+            echo "Copy the value from Replit's Secrets panel (padlock icon in the sidebar)."
+            exit 1
+          fi
+          echo "GH_REPLIT_TOKEN secret is present."
+
+      - name: Validate token against GitHub API
+        id: validate
+        run: |
+          HTTP_STATUS=$(curl -s -o /tmp/token-check.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.GH_REPLIT_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/user")
+
+          echo "GitHub API response: HTTP ${HTTP_STATUS}"
+
+          if [ "$HTTP_STATUS" -eq 401 ] || [ "$HTTP_STATUS" -eq 403 ]; then
+            echo "::error::GITHUB_TOKEN (GH_REPLIT_TOKEN) is INVALID or EXPIRED (HTTP ${HTTP_STATUS})."
+            echo ""
+            echo "To rotate the token:"
+            echo "  1. Go to https://github.com/settings/tokens and create a new PAT"
+            echo "     with 'repo' scope (or fine-grained: Contents + Metadata read/write)."
+            echo "  2. Update GITHUB_TOKEN in Replit's Secrets panel (padlock icon → Secrets)."
+            echo "  3. Update GH_REPLIT_TOKEN in GitHub Actions secrets"
+            echo "     (Repository → Settings → Secrets and variables → Actions)."
+            echo ""
+            cat /tmp/token-check.json || true
+            exit 1
+          fi
+
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "::warning::Unexpected HTTP status ${HTTP_STATUS} from GitHub API."
+            cat /tmp/token-check.json || true
+            exit 1
+          fi
+
+          LOGIN=$(cat /tmp/token-check.json | grep -o '"login":"[^"]*"' | head -1 | cut -d'"' -f4)
+          echo "Token is valid. Authenticated as: ${LOGIN}"
+
+      - name: Check token expiry from API headers
+        run: |
+          # Fetch headers to surface the GitHub-Authentication-Token-Expiration header
+          # (present for fine-grained PATs and some classic PATs)
+          EXPIRY=$(curl -sI \
+            -H "Authorization: Bearer ${{ secrets.GH_REPLIT_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/user" \
+            | grep -i "github-authentication-token-expiration" | tr -d '\r' || true)
+
+          if [ -n "$EXPIRY" ]; then
+            echo "Token expiry header: ${EXPIRY}"
+            echo "::notice::${EXPIRY}"
+          else
+            echo "No expiry header returned (token may have no expiry, or expiry is not surfaced by the API)."
+          fi
+
+          echo "Token health check complete."
