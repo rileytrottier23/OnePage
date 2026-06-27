@@ -52,6 +52,10 @@ export interface IStorage {
   // Default categories
   initializeDefaultCategories(userId?: number): Promise<void>;
   
+  // AI Insights cache
+  getInsightsCache(userId: number, month: number, year: number): Promise<{ insights: string; generatedAt: Date } | undefined>;
+  setInsightsCache(userId: number, month: number, year: number, insights: string): Promise<void>;
+
   // Session store for authentication
   sessionStore: session.Store;
 }
@@ -61,12 +65,21 @@ const PostgresSessionStore = connectPg(session);
 // Database storage implementation
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
+  private insightsCache: Map<string, { insights: string; generatedAt: Date }> = new Map();
 
   constructor() {
     this.sessionStore = new PostgresSessionStore({ 
       pool, 
       createTableIfMissing: true 
     });
+  }
+
+  async getInsightsCache(userId: number, month: number, year: number): Promise<{ insights: string; generatedAt: Date } | undefined> {
+    return this.insightsCache.get(`${userId}-${month}-${year}`);
+  }
+
+  async setInsightsCache(userId: number, month: number, year: number, insights: string): Promise<void> {
+    this.insightsCache.set(`${userId}-${month}-${year}`, { insights, generatedAt: new Date() });
   }
 
   async initializeDefaultCategories(userId?: number) {
