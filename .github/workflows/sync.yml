@@ -1,0 +1,22 @@
+name: Sync from Replit
+
+on:
+  repository_dispatch:
+    types: [replit-deploy]
+  workflow_dispatch:
+
+jobs:
+  confirm-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log sync event
+        run: |
+          echo "GitHub is in sync with Replit deploy."
+          echo "Triggered at: $(date -u)"
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "Deploy SHA: ${{ github.event.client_payload.sha }}"
+            echo "Deploy ref: ${{ github.event.client_payload.ref }}"
+          fi
