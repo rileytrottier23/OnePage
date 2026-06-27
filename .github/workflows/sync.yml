@@ -6,17 +6,42 @@ on:
   workflow_dispatch:
 
 jobs:
-  confirm-sync:
+  verify-sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout latest commit
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-      - name: Log sync event
+      - name: Verify commit matches deployed SHA
         run: |
-          echo "GitHub is in sync with Replit deploy."
-          echo "Triggered at: $(date -u)"
+          CURRENT_SHA=$(git rev-parse HEAD)
+          echo "HEAD on GitHub: ${CURRENT_SHA}"
           if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-            echo "Deploy SHA: ${{ github.event.client_payload.sha }}"
-            echo "Deploy ref: ${{ github.event.client_payload.ref }}"
+            EXPECTED_SHA="${{ github.event.client_payload.sha }}"
+            echo "Expected SHA from Replit deploy: ${EXPECTED_SHA}"
+            if [ "${CURRENT_SHA}" = "${EXPECTED_SHA}" ]; then
+              echo "OK: GitHub is in sync with Replit."
+            else
+              echo "MISMATCH: GitHub HEAD (${CURRENT_SHA}) does not match deployed SHA (${EXPECTED_SHA})."
+              exit 1
+            fi
+          else
+            echo "Manually triggered. Current HEAD: ${CURRENT_SHA}"
           fi
+
+      - name: Install dependencies and build
+        run: |
+          npm ci
+          npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Confirm build artifact exists
+        run: |
+          if [ ! -f dist/index.js ]; then
+            echo "ERROR: dist/index.js not found after build."
+            exit 1
+          fi
+          echo "Build artifact confirmed: dist/index.js exists."
