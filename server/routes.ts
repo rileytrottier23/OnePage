@@ -35,6 +35,12 @@ function setupScheduledTasks() {
           await storage.processRepeatingTasks(user.id);
         }
       }
+
+      if (hour === 3) {
+        console.log("It's 3am - pruning stale AI insights cache");
+        const deletedCount = await storage.pruneOldInsightsCache();
+        console.log(`Pruned ${deletedCount} stale insights cache row(s)`);
+      }
     } catch (error) {
       console.error("Error in scheduled tasks:", error);
     }

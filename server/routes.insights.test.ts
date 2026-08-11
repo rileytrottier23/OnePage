@@ -18,6 +18,7 @@ const { mockStorage } = vi.hoisted(() => ({
     setInsightsCache: vi.fn(),
     getInsightsCache: vi.fn(),
     deleteInsightsCache: vi.fn(),
+    pruneOldInsightsCache: vi.fn(),
     archiveCompletedTasks: vi.fn(),
     processRepeatingTasks: vi.fn(),
     getAllUsers: vi.fn(),
@@ -232,5 +233,41 @@ describe("POST /api/insights/generate – route-level", () => {
     expect(typeof body.insights).toBe("string");
     expect(typeof body.generatedAt).toBe("string");
     expect(new Date(body.generatedAt).toISOString()).toBe(generatedAt.toISOString());
+  });
+});
+
+describe("scheduled stale insights cache pruning", () => {
+  beforeEach(() => {
+    mockStorage.pruneOldInsightsCache.mockReset();
+    mockStorage.getAllUsers.mockReset();
+    mockStorage.getAllUsers.mockResolvedValue([]);
+    mockStorage.pruneOldInsightsCache.mockResolvedValue(0);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it("prunes old insights cache rows when the scheduled task runs at 3am", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-08T03:00:00"));
+
+    const app = buildApp();
+    await registerRoutes(app);
+
+    await vi.waitFor(() => {
+      expect(mockStorage.pruneOldInsightsCache).toHaveBeenCalled();
+    });
+  });
+
+  it("does not prune insights cache outside the scheduled hour", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-08T10:00:00"));
+
+    const app = buildApp();
+    await registerRoutes(app);
+
+    expect(mockStorage.pruneOldInsightsCache).not.toHaveBeenCalled();
   });
 });

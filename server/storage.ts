@@ -57,6 +57,7 @@ export interface IStorage {
   getInsightsCache(userId: number, month: number, year: number): Promise<{ insights: string; generatedAt: Date } | undefined>;
   setInsightsCache(userId: number, month: number, year: number, insights: string): Promise<void>;
   deleteInsightsCache(userId: number, month: number, year: number): Promise<boolean>;
+  pruneOldInsightsCache(retentionMonths?: number): Promise<number>;
 
   // Session store for authentication
   sessionStore: session.Store;
@@ -108,6 +109,18 @@ export class DatabaseStorage implements IStorage {
         eq(insightsCache.year, year)
       ));
     return true;
+  }
+
+  async pruneOldInsightsCache(retentionMonths: number = 12): Promise<number> {
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - retentionMonths);
+
+    const deleted = await db
+      .delete(insightsCache)
+      .where(lt(insightsCache.generatedAt, cutoff))
+      .returning({ id: insightsCache.id });
+
+    return deleted.length;
   }
 
   async initializeDefaultCategories(userId?: number) {
