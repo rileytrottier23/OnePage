@@ -28,13 +28,17 @@ npm install
 elapsed "npm install" "$T0"
 
 # ---------------------------------------------------------------------------
-# 2. Push database schema
+# 2. Push database schema (non-fatal — sync must still run even if this fails)
 # ---------------------------------------------------------------------------
 echo ""
 echo "=== db:push ==="
 T0=$(date +%s)
-npm run db:push -- --force
-elapsed "db:push" "$T0"
+if npm run db:push -- --force; then
+  elapsed "db:push" "$T0"
+else
+  elapsed "db:push (failed)" "$T0"
+  echo "WARNING: db:push failed (exit $?). Schema may be out of date, but continuing to GitHub sync."
+fi
 
 # ---------------------------------------------------------------------------
 # 3. Sync to GitHub (non-fatal — post-merge always succeeds even if this fails)
