@@ -22,12 +22,21 @@
 # script instances both pass the pre-push fetch check, only the first one that
 # actually reaches GitHub wins; the second sees the lease mismatch and fails
 # with a clear error rather than silently creating a fork.
+#
+# Concurrency guard
+# -----------------
+# A file-based exclusive lock (/tmp/sync-to-github.lock) is acquired with
+# flock before the fetch step. A second concurrent invocation that cannot
+# acquire the lock exits cleanly (exit 0) rather than proceeding to push.
+# The lock is released automatically when the process exits, whether by
+# success, failure, or signal.
 
 set -euo pipefail
 
 REPO="rileytrottier23/OnePage"
 BRANCH="main"
 STATUS_FILE=".sync-status.json"
+LOCK_FILE="/tmp/sync-to-github.lock"
 
 # ---------------------------------------------------------------------------
 # Status writer — called at every exit path to record the result in-app
@@ -107,6 +116,23 @@ echo "Configuring git..."
 git config user.email "replit-deploy@users.noreply.github.com"
 git config user.name "Replit Deploy Bot"
 git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
+
+# ---------------------------------------------------------------------------
+# Concurrency lock — only one sync instance may run at a time
+# ---------------------------------------------------------------------------
+# Open (or create) the lock file on fd 200, then acquire an exclusive lock.
+# -n makes flock non-blocking: a second concurrent invocation prints a clear
+# message and exits 0 rather than proceeding to push or hanging indefinitely.
+# The lock is released automatically when the process exits (success or failure).
+exec 200>>"${LOCK_FILE}"
+if ! flock -n 200; then
+  echo ""
+  echo "INFO: Another sync is already in progress (lock held: ${LOCK_FILE})."
+  echo "  Exiting without pushing to avoid a concurrent-push race."
+  echo ""
+  exit 0
+fi
+echo "Lock acquired (${LOCK_FILE}). Proceeding with sync..."
 
 # ---------------------------------------------------------------------------
 # Fetch remote state — always do this before any push decision
