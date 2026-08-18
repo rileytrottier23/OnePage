@@ -1,6 +1,6 @@
 #!/bin/bash
 # Pushes the current Replit commit to GitHub and dispatches a repository_dispatch event.
-# Requires GITHUB_TOKEN to be set as a Replit secret.
+# Requires GITHUB_PERSONAL_ACCESS_TOKEN (preferred) or GITHUB_TOKEN to be set as a Replit secret.
 # Usage: bash scripts/sync-to-github.sh
 #
 # Push safety model
@@ -67,47 +67,81 @@ EOF
   echo "Deploy status written to ${STATUS_FILE} (status=${status})"
 }
 
-if [ -z "${GITHUB_TOKEN:-}" ]; then
-  write_status "failure" "" "GITHUB_TOKEN secret is not set. Add it in Replit's Secrets panel (Settings → Secrets) as GITHUB_TOKEN."
-  echo "ERROR: GITHUB_TOKEN secret is not set."
-  echo "Add it in Replit's Secrets panel (Settings → Secrets) as GITHUB_TOKEN."
+# ---------------------------------------------------------------------------
+# Credential selection — prefer GITHUB_PERSONAL_ACCESS_TOKEN, fall back to GITHUB_TOKEN
+# ---------------------------------------------------------------------------
+if [ -n "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
+  SYNC_TOKEN="${GITHUB_PERSONAL_ACCESS_TOKEN}"
+  SYNC_TOKEN_VAR="GITHUB_PERSONAL_ACCESS_TOKEN"
+elif [ -n "${GITHUB_TOKEN:-}" ]; then
+  SYNC_TOKEN="${GITHUB_TOKEN}"
+  SYNC_TOKEN_VAR="GITHUB_TOKEN"
+else
+  write_status "failure" "" "No sync credential found. Set GITHUB_PERSONAL_ACCESS_TOKEN in Replit's Secrets panel (preferred), or GITHUB_TOKEN as a fallback. No code was pushed to GitHub."
+  echo ""
+  echo "ERROR: No sync credential is set."
+  echo "  Neither GITHUB_PERSONAL_ACCESS_TOKEN nor GITHUB_TOKEN is present in the environment."
+  echo "  Add GITHUB_PERSONAL_ACCESS_TOKEN in Replit's Secrets panel (padlock icon)."
+  echo "  No code was pushed to GitHub."
+  echo ""
   exit 1
 fi
 
 # ---------------------------------------------------------------------------
-# Pre-flight: verify the token is valid before touching git
+# Pre-flight: verify the credential is valid before touching git
 # ---------------------------------------------------------------------------
-echo "Verifying GITHUB_TOKEN..."
-TOKEN_CHECK_STATUS=$(curl -s -o /tmp/gh-token-check.json -w "%{http_code}" \
-  -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+echo "Verifying \$${SYNC_TOKEN_VAR}..."
+TOKEN_CHECK_STATUS=$(curl -s --max-time 15 \
+  -o /tmp/gh-token-check.json \
+  -w "%{http_code}" \
+  -H "Authorization: Bearer ${SYNC_TOKEN}" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   "https://api.github.com/user")
+PREFLIGHT_CURL_EXIT=$?
+
+if [ $PREFLIGHT_CURL_EXIT -ne 0 ] || [ "$TOKEN_CHECK_STATUS" = "000" ]; then
+  write_status "failure" "" "Network error reaching GitHub API (curl exit ${PREFLIGHT_CURL_EXIT}, HTTP ${TOKEN_CHECK_STATUS}). This is a connectivity problem, not a credential problem. No code was pushed to GitHub."
+  echo ""
+  echo "ERROR: Could not reach GitHub API — network or connectivity problem."
+  echo "  Credential read from: \$${SYNC_TOKEN_VAR}"
+  echo "  curl exit code:       ${PREFLIGHT_CURL_EXIT}"
+  echo "  HTTP status:          ${TOKEN_CHECK_STATUS}"
+  echo "  This is NOT a credential error. No code was pushed to GitHub."
+  echo "  Check your network connection and try again."
+  echo ""
+  exit 1
+fi
 
 if [ "$TOKEN_CHECK_STATUS" -eq 401 ] || [ "$TOKEN_CHECK_STATUS" -eq 403 ]; then
-  write_status "failure" "" "GITHUB_TOKEN is invalid or expired (HTTP ${TOKEN_CHECK_STATUS}). Go to https://github.com/settings/tokens and generate a new token with repo scope, then update the GITHUB_TOKEN secret in Replit."
+  write_status "failure" "" "${SYNC_TOKEN_VAR} is invalid or expired (HTTP ${TOKEN_CHECK_STATUS}). No code was pushed to GitHub. Update ${SYNC_TOKEN_VAR} in Replit's Secrets panel."
   echo ""
-  echo "ERROR: GITHUB_TOKEN is invalid or expired (HTTP ${TOKEN_CHECK_STATUS})."
+  echo "ERROR: Sync credential is invalid or expired — no code was pushed to GitHub."
+  echo "  Credential read from: \$${SYNC_TOKEN_VAR}"
+  echo "  GitHub API response:  HTTP ${TOKEN_CHECK_STATUS} (authentication rejected)"
+  echo "  This is an authentication failure, not a network problem."
   echo ""
   echo "  To fix this:"
-  echo "  1. Go to https://github.com/settings/tokens and generate a new Personal Access Token"
-  echo "     with 'repo' scope (fine-grained PAT: Contents read & write, Metadata read)."
-  echo "  2. Open the Replit Secrets panel (padlock icon in the sidebar, or Settings → Secrets)."
-  echo "  3. Update the GITHUB_TOKEN secret with the new token value."
-  echo "  4. Re-run this sync or redeploy."
-  echo ""
-  echo "  Token expiry tip: fine-grained PATs can be set with no expiry, or with a long"
-  echo "  expiry (e.g. 1 year). The token-health GitHub Actions workflow (on a weekly"
-  echo "  schedule) will warn you before it goes stale if stored as GH_REPLIT_TOKEN."
+  echo "  1. Go to https://github.com/settings/tokens and generate a new PAT"
+  echo "     with 'repo' scope (or fine-grained: Contents + Metadata read/write)."
+  echo "  2. In Replit's Secrets panel (padlock icon), update \$${SYNC_TOKEN_VAR}."
+  echo "  3. Re-run this sync or redeploy."
   echo ""
   exit 1
 fi
 
 if [ "$TOKEN_CHECK_STATUS" -lt 200 ] || [ "$TOKEN_CHECK_STATUS" -ge 300 ]; then
-  echo "WARNING: GitHub API token check returned unexpected HTTP ${TOKEN_CHECK_STATUS}."
+  write_status "failure" "" "GitHub API returned unexpected HTTP ${TOKEN_CHECK_STATUS} during preflight (credential: ${SYNC_TOKEN_VAR}). This may be a GitHub outage or transient error. No code was pushed to GitHub."
+  echo ""
+  echo "ERROR: GitHub API returned an unexpected status during preflight — no code was pushed to GitHub."
+  echo "  Credential read from: \$${SYNC_TOKEN_VAR}"
+  echo "  GitHub API response:  HTTP ${TOKEN_CHECK_STATUS}"
+  echo "  This is likely a GitHub outage or transient API error, not a credential problem."
   cat /tmp/gh-token-check.json 2>/dev/null || true
+  echo ""
+  exit 1
 fi
 
-echo "Token OK (HTTP ${TOKEN_CHECK_STATUS})."
+echo "Credential OK (\$${SYNC_TOKEN_VAR}, HTTP ${TOKEN_CHECK_STATUS})."
 
 # ---------------------------------------------------------------------------
 # Configure git remote
@@ -115,7 +149,7 @@ echo "Token OK (HTTP ${TOKEN_CHECK_STATUS})."
 echo "Configuring git..."
 git config user.email "replit-deploy@users.noreply.github.com"
 git config user.name "Replit Deploy Bot"
-git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
+git remote set-url origin "https://x-access-token:${SYNC_TOKEN}@github.com/${REPO}.git"
 
 # ---------------------------------------------------------------------------
 # Concurrency lock — only one sync instance may run at a time
@@ -225,16 +259,16 @@ echo "Dispatching repository_dispatch to GitHub Actions..."
 HTTP_STATUS=$(curl -s -o /tmp/gh-dispatch-response.json -w "%{http_code}" \
   -X POST \
   -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+  -H "Authorization: Bearer ${SYNC_TOKEN}" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   "https://api.github.com/repos/${REPO}/dispatches" \
   -d "{\"event_type\":\"replit-deploy\",\"client_payload\":{\"sha\":\"${SHA}\",\"ref\":\"${REF}\"}}")
 
 if [ "$HTTP_STATUS" -eq 401 ] || [ "$HTTP_STATUS" -eq 403 ]; then
-  write_status "failure" "${SHA}" "repository_dispatch rejected (HTTP ${HTTP_STATUS}) — GITHUB_TOKEN is invalid or expired. Update GITHUB_TOKEN in Replit's Secrets panel."
+  write_status "failure" "${SHA}" "repository_dispatch rejected (HTTP ${HTTP_STATUS}) — ${SYNC_TOKEN_VAR} is invalid or expired. Update ${SYNC_TOKEN_VAR} in Replit's Secrets panel."
   echo ""
-  echo "ERROR: repository_dispatch rejected (HTTP ${HTTP_STATUS}) — GITHUB_TOKEN is invalid or expired."
-  echo "  Update GITHUB_TOKEN in Replit's Secrets panel."
+  echo "ERROR: repository_dispatch rejected (HTTP ${HTTP_STATUS}) — \$${SYNC_TOKEN_VAR} is invalid or expired."
+  echo "  Update \$${SYNC_TOKEN_VAR} in Replit's Secrets panel."
   cat /tmp/gh-dispatch-response.json 2>/dev/null || true
   exit 1
 fi
