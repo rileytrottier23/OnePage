@@ -1,84 +1,170 @@
 name: Token Health Check
 
-# Runs weekly to verify GH_REPLIT_TOKEN (the PAT used by Replit's sync script)
-# is still valid before it can expire silently.
+# What this covers — and what it deliberately does not.
 #
-# Setup:
-#   1. Copy your GITHUB_TOKEN value from Replit Secrets.
-#   2. Add it as a GitHub Actions secret named GH_REPLIT_TOKEN:
-#      Repository → Settings → Secrets and variables → Actions → New repository secret.
-#   3. The check will run every Monday at 09:00 UTC and fail visibly if the
-#      token has expired or been revoked, giving you time to rotate it.
+# GitHub Actions cannot read Replit's secret vault. GH_REPLIT_TOKEN is a MANUAL
+# COPY of the credential the sync actually uses (GITHUB_PERSONAL_ACCESS_TOKEN,
+# stored in Replit). Those two values can drift apart, and a green run here does
+# NOT prove the sync is working.
+#
+# That is not hypothetical. In August 2026 the copy was valid while the real
+# credential was dead, so this workflow passed for weeks while nothing reached
+# GitHub. A monitor that reports success when the work is not happening is worse
+# than no monitor, because it actively suppresses investigation.
+#
+# So there are two independent checks:
+#   1. Is the copied credential valid, and is it expiring soon?
+#   2. Has the sync actually reported in recently?
+#
+# Check 2 is the one that matters. Check 1 can pass while everything is broken.
 
 on:
   schedule:
-    # Every Monday at 09:00 UTC
-    - cron: "0 9 * * 1"
+    - cron: "0 9 * * 1"   # Mondays 09:00 UTC
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+env:
+  # Warn far enough ahead that there is time to rotate calmly.
+  EXPIRY_WARN_DAYS: 14
+  # How long without a sync report before we treat it as broken.
+  SYNC_STALE_DAYS: 10
+
 jobs:
-  check-token:
-    name: Verify Replit sync token is valid
+  check:
+    name: Verify sync credential and freshness
     runs-on: ubuntu-latest
     steps:
-      - name: Check GH_REPLIT_TOKEN secret is configured
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so we can date .sync-status.json
+
+      - name: Validate the copied credential
+        env:
+          # Passed via env rather than inlined into the script. Inlining a secret
+          # into a shell line breaks on awkward characters and is a script
+          # injection surface.
+          TOKEN: ${{ secrets.GH_REPLIT_TOKEN }}
         run: |
-          if [ -z "${{ secrets.GH_REPLIT_TOKEN }}" ]; then
-            echo "::warning::GH_REPLIT_TOKEN is not set as a GitHub Actions secret."
-            echo "Add it under Repository → Settings → Secrets and variables → Actions."
-            echo "Copy the value from Replit's Secrets panel (padlock icon in the sidebar)."
+          set -uo pipefail
+
+          if [ -z "${TOKEN}" ]; then
+            echo "::error::GH_REPLIT_TOKEN is not set as an Actions secret."
+            echo "Add it under Settings -> Secrets and variables -> Actions."
+            echo "It should hold the same value as GITHUB_PERSONAL_ACCESS_TOKEN in Replit."
             exit 1
           fi
-          echo "GH_REPLIT_TOKEN secret is present."
 
-      - name: Validate token against GitHub API
-        id: validate
-        run: |
-          HTTP_STATUS=$(curl -s -o /tmp/token-check.json -w "%{http_code}" \
-            -H "Authorization: Bearer ${{ secrets.GH_REPLIT_TOKEN }}" \
+          STATUS=$(curl -sS -o /tmp/resp.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${TOKEN}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/user")
+            https://api.github.com/user)
 
-          echo "GitHub API response: HTTP ${HTTP_STATUS}"
+          echo "GitHub API responded HTTP ${STATUS}"
 
-          if [ "$HTTP_STATUS" -eq 401 ] || [ "$HTTP_STATUS" -eq 403 ]; then
-            echo "::error::GITHUB_TOKEN (GH_REPLIT_TOKEN) is INVALID or EXPIRED (HTTP ${HTTP_STATUS})."
-            echo ""
-            echo "To rotate the token:"
-            echo "  1. Go to https://github.com/settings/tokens and create a new PAT"
-            echo "     with 'repo' scope (or fine-grained: Contents + Metadata read/write)."
-            echo "  2. Update GITHUB_TOKEN in Replit's Secrets panel (padlock icon → Secrets)."
-            echo "  3. Update GH_REPLIT_TOKEN in GitHub Actions secrets"
-            echo "     (Repository → Settings → Secrets and variables → Actions)."
-            echo ""
-            cat /tmp/token-check.json || true
-            exit 1
-          fi
+          case "${STATUS}" in
+            200)
+              ;;
+            401|403)
+              echo "::error::The copied credential (GH_REPLIT_TOKEN) is invalid or revoked (HTTP ${STATUS})."
+              echo ""
+              echo "Rotate in BOTH places or they will drift apart again:"
+              echo "  1. github.com/settings/tokens -> new classic PAT, 'repo' scope only."
+              echo "  2. Replit Secrets -> GITHUB_PERSONAL_ACCESS_TOKEN (the editable one,"
+              echo "     NOT GITHUB_TOKEN, which is connector-managed and read-only)."
+              echo "  3. This repo -> Settings -> Secrets and variables -> Actions -> GH_REPLIT_TOKEN."
+              cat /tmp/resp.json || true
+              exit 1
+              ;;
+            *)
+              echo "::error::Unexpected HTTP ${STATUS} from the GitHub API."
+              cat /tmp/resp.json || true
+              exit 1
+              ;;
+          esac
 
-          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
-            echo "::warning::Unexpected HTTP status ${HTTP_STATUS} from GitHub API."
-            cat /tmp/token-check.json || true
-            exit 1
-          fi
+          # Parsed with python rather than grep. The old grep assumed no space
+          # after the colon, but the API pretty-prints, so it silently returned
+          # an empty login and printed "Authenticated as: ".
+          LOGIN=$(python3 -c 'import json; print(json.load(open("/tmp/resp.json"))["login"])')
+          echo "Credential is valid. Authenticated as ${LOGIN}."
 
-          LOGIN=$(cat /tmp/token-check.json | grep -o '"login":"[^"]*"' | head -1 | cut -d'"' -f4)
-          echo "Token is valid. Authenticated as: ${LOGIN}"
-
-      - name: Check token expiry from API headers
+      - name: Warn before the credential expires
+        env:
+          TOKEN: ${{ secrets.GH_REPLIT_TOKEN }}
         run: |
-          # Fetch headers to surface the GitHub-Authentication-Token-Expiration header
-          # (present for fine-grained PATs and some classic PATs)
-          EXPIRY=$(curl -sI \
-            -H "Authorization: Bearer ${{ secrets.GH_REPLIT_TOKEN }}" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/user" \
-            | grep -i "github-authentication-token-expiration" | tr -d '\r' || true)
+          set -uo pipefail
 
-          if [ -n "$EXPIRY" ]; then
-            echo "Token expiry header: ${EXPIRY}"
-            echo "::notice::${EXPIRY}"
-          else
-            echo "No expiry header returned (token may have no expiry, or expiry is not surfaced by the API)."
+          EXPIRY=$(curl -sSI \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/user \
+            | tr -d '\r' \
+            | sed -n 's/^[Gg]ithub-[Aa]uthentication-[Tt]oken-[Ee]xpiration: *//p')
+
+          if [ -z "${EXPIRY}" ]; then
+            echo "::notice::No expiry header returned - this token has no expiration date."
+            exit 0
           fi
 
-          echo "Token health check complete."
+          echo "Token expiry: ${EXPIRY}"
+
+          EXP_EPOCH=$(date -u -d "${EXPIRY}" +%s 2>/dev/null || true)
+          if [ -z "${EXP_EPOCH}" ]; then
+            echo "::warning::Could not parse the expiry value '${EXPIRY}'."
+            exit 0
+          fi
+
+          DAYS=$(( ($EXP_EPOCH - $(date -u +%s)) / 86400 ))
+          echo "Days until expiry: ${DAYS}"
+
+          # Failing is deliberate. A ::warning:: annotation does not send email,
+          # so a warning about an imminent expiry would go unread - which is the
+          # original failure mode. Failing is the only reliable notification.
+          if [ "${DAYS}" -lt 0 ]; then
+            echo "::error::Credential expired ${DAYS#-} days ago."
+            exit 1
+          elif [ "${DAYS}" -le "${EXPIRY_WARN_DAYS}" ]; then
+            echo "::error::Credential expires in ${DAYS} days. Rotate it now, before it breaks."
+            exit 1
+          fi
+
+          echo "::notice::Credential valid for ${DAYS} more days."
+
+      - name: Confirm the sync is actually running
+        run: |
+          set -uo pipefail
+
+          # This is the check that would have caught the real outage.
+          if [ ! -f .sync-status.json ]; then
+            echo "::warning::.sync-status.json not found - cannot assess sync freshness."
+            echo "The sync script writes this file on each run; without it this check is blind."
+            exit 0
+          fi
+
+          echo "--- .sync-status.json ---"
+          cat .sync-status.json
+          echo ""
+
+          LAST=$(git log -1 --format=%cI -- .sync-status.json)
+          if [ -z "${LAST}" ]; then
+            echo "::warning::No commit history for .sync-status.json."
+            exit 0
+          fi
+
+          AGE=$(( ($(date -u +%s) - $(date -u -d "${LAST}" +%s)) / 86400 ))
+          echo "Sync last reported ${LAST} (${AGE} days ago)"
+
+          if [ "${AGE}" -gt "${SYNC_STALE_DAYS}" ]; then
+            echo "::error::The Replit -> GitHub sync has not reported in ${AGE} days (threshold ${SYNC_STALE_DAYS})."
+            echo ""
+            echo "Note that the credential check above may have PASSED. That only tells you"
+            echo "the copy in GH_REPLIT_TOKEN is healthy - it says nothing about whether the"
+            echo "sync itself is working. This check is the one that matters."
+            exit 1
+          fi
+
+          echo "::notice::Sync reported ${AGE} days ago - healthy."
