@@ -5,7 +5,7 @@ import { insertCategorySchema, insertTaskSchema, insertRepeatingTaskSchema } fro
 import { z } from "zod";
 import { ZodError } from "zod";
 import { setupAuth } from "./auth";
-import { generateInsights } from "./openai";
+import { generateInsights } from "./ai";
 import fs from "fs";
 import path from "path";
 

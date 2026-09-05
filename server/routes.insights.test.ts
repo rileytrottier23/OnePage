@@ -7,7 +7,7 @@ const { mockGenerateInsights } = vi.hoisted(() => ({
   mockGenerateInsights: vi.fn(),
 }));
 
-vi.mock("./openai.js", () => ({
+vi.mock("./ai.js", () => ({
   generateInsights: mockGenerateInsights,
 }));
 
@@ -106,7 +106,7 @@ describe("POST /api/insights/generate – route-level", () => {
     mockStorage.getAllTasks.mockResolvedValue([]);
     mockGenerateInsights.mockRejectedValue(
       new Error(
-        "AI_KEY_MISSING: No OpenAI API key is configured. Please add your OPENAI_API_KEY to the environment."
+        "AI_KEY_MISSING: No Anthropic API key is configured. Please add your ANTHROPIC_API_KEY to the environment."
       )
     );
 
@@ -123,7 +123,7 @@ describe("POST /api/insights/generate – route-level", () => {
     mockStorage.getAllTasks.mockResolvedValue([]);
     mockGenerateInsights.mockRejectedValue(
       new Error(
-        "AI_KEY_INVALID: The OpenAI API key is invalid or has been revoked. Please update your OPENAI_API_KEY."
+        "AI_KEY_INVALID: The Anthropic API key is invalid or has been revoked. Please update your ANTHROPIC_API_KEY."
       )
     );
 
@@ -140,7 +140,7 @@ describe("POST /api/insights/generate – route-level", () => {
     mockStorage.getAllTasks.mockResolvedValue([]);
     mockGenerateInsights.mockRejectedValue(
       new Error(
-        "AI_RATE_LIMITED: OpenAI is receiving too many requests right now. Please wait a moment and try again."
+        "AI_RATE_LIMITED: The AI service is receiving too many requests right now. Please wait a moment and try again."
       )
     );
 
@@ -157,7 +157,7 @@ describe("POST /api/insights/generate – route-level", () => {
     mockStorage.getAllTasks.mockResolvedValue([]);
     mockGenerateInsights.mockRejectedValue(
       new Error(
-        "AI_QUOTA_EXCEEDED: Your OpenAI account has exceeded its usage quota. Please check your billing details."
+        "AI_QUOTA_EXCEEDED: Your AI account has exceeded its usage quota. Please check your billing details."
       )
     );
 

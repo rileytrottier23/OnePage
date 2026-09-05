@@ -105,7 +105,7 @@ describe("AIInsightsPage client", () => {
       })
       .mockRejectedValueOnce(
         new Error(
-          "AI_KEY_MISSING: No OpenAI API key is configured. Please add your OPENAI_API_KEY to the environment."
+          "AI_KEY_MISSING: No Anthropic API key is configured. Please add your ANTHROPIC_API_KEY to the environment."
         )
       );
 
@@ -124,7 +124,7 @@ describe("AIInsightsPage client", () => {
     );
 
     expect(
-      screen.getByText(/No OpenAI API key is configured/)
+      screen.getByText(/No Anthropic API key is configured/)
     ).toBeInTheDocument();
   });
 
