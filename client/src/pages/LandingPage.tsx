@@ -34,12 +34,12 @@ export default function LandingPage() {
             <h1 className="text-2xl font-bold">OnePage</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <Link href="/auth">
+            <Link href="/sign-in">
               <Button variant="outline" className="text-sm">
                 Sign In
               </Button>
             </Link>
-            <Link href="/auth?tab=register">
+            <Link href="/sign-up">
               <Button className="text-sm">
                 Get Started <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
@@ -57,7 +57,7 @@ export default function LandingPage() {
           <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
             OnePage helps you organize everything in one place with a clean, minimalist interface that lets you focus on what matters.
           </p>
-          <Link href="/auth?tab=register">
+          <Link href="/sign-up">
             <Button size="lg" className="px-8 py-6 text-lg">
               Start for free
               <ArrowRight className="ml-2 h-5 w-5" />
@@ -204,7 +204,7 @@ export default function LandingPage() {
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Join OnePage today and experience a cleaner, more focused way to organize your life.
           </p>
-          <Link href="/auth?tab=register">
+          <Link href="/sign-up">
             <Button size="lg" className="px-8">
               Get started for free
             </Button>

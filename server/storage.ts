@@ -15,9 +15,6 @@ import {
 } from "@shared/schema";
 import { eq, and, lt } from "drizzle-orm";
 import { db } from "./db";
-import session from "express-session";
-import connectPg from "connect-pg-simple";
-import { pool } from "./db";
 
 // Interface for storage operations
 export interface IStorage {
@@ -58,24 +55,10 @@ export interface IStorage {
   setInsightsCache(userId: number, month: number, year: number, insights: string): Promise<void>;
   deleteInsightsCache(userId: number, month: number, year: number): Promise<boolean>;
   pruneOldInsightsCache(retentionMonths?: number): Promise<number>;
-
-  // Session store for authentication
-  sessionStore: session.Store;
 }
-
-const PostgresSessionStore = connectPg(session);
 
 // Database storage implementation
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.Store;
-
-  constructor() {
-    this.sessionStore = new PostgresSessionStore({ 
-      pool, 
-      createTableIfMissing: true 
-    });
-  }
-
   async getInsightsCache(userId: number, month: number, year: number): Promise<{ insights: string; generatedAt: Date } | undefined> {
     const [row] = await db
       .select()

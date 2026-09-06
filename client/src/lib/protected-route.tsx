@@ -1,4 +1,4 @@
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth as useClerkAuth } from "@clerk/react";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
 
@@ -9,13 +9,13 @@ export function ProtectedRoute({
   path: string;
   component: React.ComponentType;
 }) {
-  const { user, isLoading } = useAuth();
+  const { isLoaded, isSignedIn } = useClerkAuth();
 
   return (
     <Route
       path={path}
       component={() => {
-        if (isLoading) {
+        if (!isLoaded) {
           return (
             <div className="flex items-center justify-center min-h-screen">
               <Loader2 className="h-8 w-8 animate-spin text-border" />
@@ -23,8 +23,8 @@ export function ProtectedRoute({
           );
         }
 
-        if (!user) {
-          return <Redirect to="/auth" />;
+        if (!isSignedIn) {
+          return <Redirect to="/sign-in" />;
         }
 
         return <Component />;

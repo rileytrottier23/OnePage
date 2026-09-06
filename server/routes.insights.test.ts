@@ -22,7 +22,6 @@ const { mockStorage } = vi.hoisted(() => ({
     archiveCompletedTasks: vi.fn(),
     processRepeatingTasks: vi.fn(),
     getAllUsers: vi.fn(),
-    sessionStore: { on: vi.fn() } as any,
   },
 }));
 
@@ -30,13 +29,10 @@ vi.mock("./storage.js", () => ({
   storage: mockStorage,
 }));
 
-vi.mock("./auth.js", () => ({
-  setupAuth: (app: express.Express) => {
-    app.use((req: any, _res: any, next: any) => {
-      req.user = { id: 1, username: "testuser" };
-      req.isAuthenticated = () => true;
-      next();
-    });
+vi.mock("./middlewares/requireAuth.js", () => ({
+  requireAuth: (req: any, _res: any, next: any) => {
+    req.user = { id: 1, username: "testuser" };
+    next();
   },
 }));
 

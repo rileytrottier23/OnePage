@@ -1,10 +1,31 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { clerkMiddleware } from "@clerk/express";
+import { publishableKeyFromHost } from "@clerk/shared/keys";
+import {
+  CLERK_PROXY_PATH,
+  clerkProxyMiddleware,
+  getClerkProxyHost,
+} from "./middlewares/clerkProxyMiddleware";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+// Clerk proxy must be mounted BEFORE body parsers (streams raw bytes)
+app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Resolve publishable key from request host for custom-domain support
+app.use(
+  clerkMiddleware((req) => ({
+    publishableKey: publishableKeyFromHost(
+      getClerkProxyHost(req) ?? "",
+      process.env.CLERK_PUBLISHABLE_KEY,
+    ),
+  })),
+);
 
 app.use((req, res, next) => {
   const start = Date.now();

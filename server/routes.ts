@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { insertCategorySchema, insertTaskSchema, insertRepeatingTaskSchema } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
-import { setupAuth } from "./auth";
+import { requireAuth as ensureAuth } from "./middlewares/requireAuth";
 import { generateInsights } from "./ai";
 import fs from "fs";
 import path from "path";
@@ -54,10 +54,7 @@ function setupScheduledTasks() {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Set up authentication
-  setupAuth(app);
-  
-  // Set up scheduled tasks 
+  // Set up scheduled tasks
   setupScheduledTasks();
 
   // Error handling middleware
@@ -69,13 +66,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return res.status(500).json({ message: err.message || "Internal server error" });
   };
 
-  // Middleware to ensure user is authenticated
-  const ensureAuth = (req: any, res: any, next: any) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-    next();
-  };
+  app.get("/api/user", ensureAuth, (req: any, res: any) => {
+    const { password, ...userWithoutPassword } = req.user;
+    res.json(userWithoutPassword);
+  });
 
   // Categories
   app.get("/api/categories", ensureAuth, async (req: any, res: any) => {
