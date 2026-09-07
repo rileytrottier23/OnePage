@@ -93,6 +93,10 @@ jobs:
           echo "Credential is valid. Authenticated as ${LOGIN}."
 
       - name: Warn before the credential expires
+        # Runs even if the credential check above failed. Without this, a dead
+        # token short-circuits the job here and Check 2 below - the one that
+        # actually matters - never executes.
+        if: ${{ !cancelled() }}
         env:
           TOKEN: ${{ secrets.GH_REPLIT_TOKEN }}
         run: |
@@ -135,6 +139,10 @@ jobs:
           echo "::notice::Credential valid for ${DAYS} more days."
 
       - name: Confirm the sync is actually running
+        # Also runs regardless of earlier failures - see the note above. This
+        # step doesn't need the credential at all, so there's no reason for a
+        # dead token to hide a stale sync behind it.
+        if: ${{ !cancelled() }}
         run: |
           set -uo pipefail
 
