@@ -1,6 +1,6 @@
 # OnePage Task Management
 
-A sleek, minimalist task management application built with React, Express, and modern web technologies.
+A minimalist task manager where everything happens on one screen, built with React, Express and Postgres. It was my first AI project. I wrote about building it here: [What I learned building OnePage, my first AI project](https://personal-site-production-7acd.up.railway.app/posts/onepage-lessons/).
 
 ## Features
 
@@ -12,11 +12,17 @@ A sleek, minimalist task management application built with React, Express, and m
 - **Drag & Drop**: Easily reorganize tasks between categories
 - **Keyboard Navigation**: Tab to indent, Shift+Tab to unindent
 - **Dark Theme**: Easy on the eyes for extended use
+- **Recurring Tasks**: Daily, weekly, monthly and quarterly rules
+- **Archiving**: Completed tasks move to an archive you can review later
+- **AI Productivity Reports**: Claude writes a monthly summary of what you finished and where your time went; reports are saved and can be regenerated
 
 ## Technical Stack
 
 - **Frontend**: React, TypeScript, Tailwind CSS, Shadcn UI components
 - **Backend**: Express.js, TypeScript
+- **Database**: PostgreSQL with Drizzle ORM
+- **Auth**: Clerk
+- **AI**: Anthropic Claude
 - **State Management**: TanStack Query
 - **Drag & Drop**: dnd-kit
 - **Styling**: Tailwind CSS with custom theming
@@ -25,13 +31,13 @@ A sleek, minimalist task management application built with React, Express, and m
 
 1. Clone the repository
 2. Install dependencies: `npm install`
-3. Set `DATABASE_URL` to a Postgres connection string (e.g. in a `.env` file)
+3. Set environment variables (e.g. in a `.env` file): `DATABASE_URL` (Postgres connection string), `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` (Clerk), and `ANTHROPIC_API_KEY` (for AI reports)
 4. Start the development server: `npm run dev`
 5. Open http://localhost:5000 in your browser
 
 ## Deployment
 
-Hosted on [Railway](https://railway.com), deployed automatically from `main`. `railway.json` defines the build (`npm run build`) and start (`npm run start`) commands; the app reads `PORT` and `DATABASE_URL` from the environment. GitHub Actions (`.github/workflows/ci.yml`) runs typecheck, build, and tests on every push and pull request.
+Hosted on [Railway](https://railway.com), deployed automatically from `main`. `railway.json` defines the build (`npm run build`) and start (`npm run start`) commands; the app reads `PORT`, `DATABASE_URL`, the Clerk keys and `ANTHROPIC_API_KEY` from the environment. GitHub Actions (`.github/workflows/ci.yml`) runs typecheck, build, and tests on every push and pull request.
 
 ## Usage Tips
 
