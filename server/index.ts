@@ -7,7 +7,6 @@ import {
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
 import { registerRoutes } from "./routes";
-import { registerDeleteTaskRoute } from "./routes.deleteTask";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -70,7 +69,6 @@ app.use((req, res, next) => {
       log('Database connection successful.');
     }
   
-    registerDeleteTaskRoute(app);
     const server = await registerRoutes(app);
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -92,7 +90,7 @@ app.use((req, res, next) => {
 
     // Serve both the API and the client on one port. Reads PORT so the
     // platform's proxy can reach it (Railway assigns its own); 5000 is a
-    // fallback for local dev only, not a firewall requirement like on Replit.
+    // fallback for local dev only.
     const port = Number(process.env.PORT) || 5000;
     server.listen({
       port,

@@ -9,20 +9,20 @@ import {
   CheckCheck,
   ArrowRight
 } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@clerk/react";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 
 export default function LandingPage() {
-  const { user } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const [, navigate] = useLocation();
   
   // If user is already logged in, redirect to the dashboard
   useEffect(() => {
-    if (user) {
+    if (isLoaded && isSignedIn) {
       navigate('/dashboard');
     }
-  }, [user, navigate]);
+  }, [isLoaded, isSignedIn, navigate]);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
