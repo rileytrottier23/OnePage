@@ -7,6 +7,7 @@ import {
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
 import { registerRoutes } from "./routes";
+import { registerDeleteTaskRoute } from "./routes.deleteTask";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -69,6 +70,7 @@ app.use((req, res, next) => {
       log('Database connection successful.');
     }
   
+    registerDeleteTaskRoute(app);
     const server = await registerRoutes(app);
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Task, Category, RepeatingTask } from "@shared/schema";
-import { ChevronUp, ChevronDown, GripVertical, Repeat, Calendar, Clock } from "lucide-react";
+import { ChevronUp, ChevronDown, GripVertical, Repeat, Calendar, Clock, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDraggable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
@@ -108,12 +108,36 @@ export default function TaskItem({
     }
   });
 
+  // Deleting is permanent, so the menu asks for a second click before it runs.
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const deleteTaskMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", `/api/tasks/${task.id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+    }
+  });
+
+  const handleDeleteTask = () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    deleteTaskMutation.mutate();
+    setConfirmDelete(false);
+    setOpen(false);
+  };
+
   // Fetch categories for the dropdown
   const { data: categories = [] } = useQuery<Category[]>({ 
     queryKey: ["/api/categories"],
   });
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
+  const setOpen = (next: boolean) => {
+    if (!next) setConfirmDelete(false);
+    setOpenState(next);
+  };
   const [isRepeatDialogOpen, setIsRepeatDialogOpen] = useState(false);
   const [repeatType, setRepeatType] = useState<'daily' | 'weekly' | 'monthly' | 'quarterly'>('daily');
   const [repeatCategoryId, setRepeatCategoryId] = useState<number | null>(task.categoryId);
@@ -356,6 +380,17 @@ export default function TaskItem({
                     {hasExistingRepeatingTask ? "Already repeating" : "Set up repeating task"}
                   </CommandItem>
                 </CommandGroup>
+                <CommandSeparator />
+                <CommandGroup heading="Delete">
+                  <CommandItem
+                    onSelect={handleDeleteTask}
+                    disabled={deleteTaskMutation.isPending}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {confirmDelete ? "Click again to delete" : "Delete task"}
+                  </CommandItem>
+                </CommandGroup>
               </Command>
             </PopoverContent>
           </Popover>
@@ -402,6 +437,17 @@ export default function TaskItem({
                   >
                     <Repeat className="mr-2 h-4 w-4" />
                     {hasExistingRepeatingTask ? "Already repeating" : "Set up repeating task"}
+                  </CommandItem>
+                </CommandGroup>
+                <CommandSeparator />
+                <CommandGroup heading="Delete">
+                  <CommandItem
+                    onSelect={handleDeleteTask}
+                    disabled={deleteTaskMutation.isPending}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {confirmDelete ? "Click again to delete" : "Delete task"}
                   </CommandItem>
                 </CommandGroup>
               </Command>
