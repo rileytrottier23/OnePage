@@ -15,7 +15,6 @@ import ContactPage from "@/pages/contact-page";
 import LandingPage from "@/pages/LandingPage";
 import RepeatingTasksPage from "@/pages/RepeatingTasksPage";
 import AIInsightsPage from "@/pages/AIInsightsPage";
-import DeployStatusPage from "@/pages/DeployStatusPage";
 
 // REQUIRED — copy verbatim. Resolves the key from window.location.hostname so the
 // same build serves multiple Clerk custom domains.
@@ -78,7 +77,6 @@ function Router() {
       <ProtectedRoute path="/archive" component={Archive} />
       <ProtectedRoute path="/repeating" component={RepeatingTasksPage} />
       <ProtectedRoute path="/ai-insights" component={AIInsightsPage} />
-      <ProtectedRoute path="/deploy-status" component={DeployStatusPage} />
       <Route path="/about" component={About} />
       <Route path="/contact" component={ContactPage} />
       {/* Legacy /auth route — redirect to sign-in */}
@@ -103,6 +101,8 @@ function App() {
       appearance={clerkAppearance}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
+      signInFallbackRedirectUrl="/dashboard"
+      signUpFallbackRedirectUrl="/dashboard"
       routerPush={(to) => setLocation(to)}
       routerReplace={(to) => setLocation(to, { replace: true })}
     >

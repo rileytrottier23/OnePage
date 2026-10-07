@@ -123,7 +123,7 @@ export default function Archive() {
                     <div className="flex justify-between items-center mb-3">
                       <h2 className="text-xl font-semibold flex items-center">
                         {date}
-                        <Badge variant="outline" className="ml-2 bg-primary bg-opacity-20 text-primary">
+                        <Badge variant="outline" className="ml-2 bg-primary/20 text-primary">
                           {groupedTasks[date].length}
                         </Badge>
                       </h2>
@@ -154,8 +154,8 @@ export default function Archive() {
             )}
 
             <div className="text-center mb-6">
-              <Link href="/">
-                <Button className="text-primary inline-flex items-center">
+              <Link href="/dashboard">
+                <Button variant="outline" className="inline-flex items-center">
                   <ChevronLeft className="h-5 w-5 mr-2" />
                   Back to Tasks
                 </Button>

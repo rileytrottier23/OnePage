@@ -7,7 +7,6 @@ import {
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
 import { registerRoutes } from "./routes";
-import { registerDeleteTaskRoute } from "./routes.deleteTask";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -31,27 +30,12 @@ app.use(
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+      // Method, path, status and timing only. Response bodies hold users'
+      // tasks and emails, which shouldn't end up in the hosting logs.
+      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
     }
   });
 
@@ -70,7 +54,6 @@ app.use((req, res, next) => {
       log('Database connection successful.');
     }
   
-    registerDeleteTaskRoute(app);
     const server = await registerRoutes(app);
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -92,7 +75,7 @@ app.use((req, res, next) => {
 
     // Serve both the API and the client on one port. Reads PORT so the
     // platform's proxy can reach it (Railway assigns its own); 5000 is a
-    // fallback for local dev only, not a firewall requirement like on Replit.
+    // fallback for local dev only.
     const port = Number(process.env.PORT) || 5000;
     server.listen({
       port,

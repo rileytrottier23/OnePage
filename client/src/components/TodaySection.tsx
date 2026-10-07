@@ -190,7 +190,7 @@ export default function TodaySection({ tasks }: TodaySectionProps) {
       <div className="flex justify-between items-center mb-3">
         <h2 className="text-xl font-semibold flex items-center">
           Today
-          <Badge variant="outline" className="ml-2 bg-primary bg-opacity-20 text-primary">
+          <Badge variant="outline" className="ml-2 bg-primary/20 text-primary">
             {todayTasks.length}
           </Badge>
         </h2>
