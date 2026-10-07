@@ -1,6 +1,6 @@
 # OnePage Task Management
 
-A minimalist task manager where everything happens on one screen, built with React, Express and Postgres. It was my first AI project. I wrote about building it here: [What I learned building OnePage, my first AI project](https://personal-site-production-7acd.up.railway.app/posts/onepage-lessons/).
+A minimalist task manager where everything happens on one screen, built with React, Express and Postgres. It was my first AI project. I wrote about building it here: [What I learned building OnePage, my first AI project](https://rileytrottier.com/posts/onepage-lessons/).
 
 ## Features
 
