@@ -6,8 +6,6 @@ import { z } from "zod";
 import { ZodError } from "zod";
 import { requireAuth as ensureAuth } from "./middlewares/requireAuth";
 import { generateInsights } from "./ai";
-import fs from "fs";
-import path from "path";
 
 // Function to schedule daily tasks like archiving completed tasks and processing repeating tasks
 function setupScheduledTasks() {
@@ -661,33 +659,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Deploy status endpoint — reads the JSON file written by sync-to-github.sh
-  app.get("/api/deploy-status", ensureAuth, (req: any, res: any) => {
-    const statusFile = path.resolve(process.cwd(), ".sync-status.json");
-    try {
-      if (!fs.existsSync(statusFile)) {
-        return res.json({
-          status: "unknown",
-          timestamp: null,
-          sha: null,
-          error: null,
-          actionsUrl: null,
-        });
-      }
-      const raw = fs.readFileSync(statusFile, "utf8");
-      const parsed = JSON.parse(raw);
-      return res.json({
-        status: parsed.status ?? "unknown",
-        timestamp: parsed.timestamp ?? null,
-        sha: parsed.sha ?? null,
-        error: parsed.error ?? null,
-        actionsUrl: parsed.actionsUrl ?? null,
-      });
-    } catch (err) {
-      console.error("Failed to read deploy status file:", err);
-      return res.status(500).json({ message: "Could not read deploy status" });
-    }
-  });
 
   const httpServer = createServer(app);
 

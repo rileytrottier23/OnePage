@@ -82,7 +82,7 @@ export default function ContactPage() {
                   <h3 className="text-lg font-medium">Common queries:</h3>
                   <ul className="list-disc pl-5 space-y-2">
                     <li>
-                      <span className="font-medium">Forgot password?</span> - Please reach out via email with your username and registered email address.
+                      <span className="font-medium">Can't sign in?</span> - Use "Forgot password?" on the sign-in page, or email us from the address on your account.
                     </li>
                     <li>
                       <span className="font-medium">Account issues?</span> - Contact us with details about any login or account problems you're experiencing.
