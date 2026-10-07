@@ -1,4 +1,4 @@
-import { getAuth } from "@clerk/express";
+import { clerkClient, getAuth } from "@clerk/express";
 import { storage } from "../storage";
 
 function usernameBaseFromEmail(email: string): string {
@@ -21,6 +21,29 @@ async function findAvailableUsername(email: string): Promise<string> {
   return candidate;
 }
 
+// Remembers each Clerk user's email so we only ask Clerk for it once.
+const emailByClerkUserId = new Map<string, string>();
+
+// The session token only carries an email if the Clerk instance has been
+// configured to add one. When it's missing, look the signed-in user up in
+// Clerk and use their verified primary email, so sign-in doesn't depend on
+// that dashboard setting.
+async function emailForClerkUser(userId: string): Promise<string | undefined> {
+  const cached = emailByClerkUserId.get(userId);
+  if (cached) return cached;
+
+  const user = await clerkClient.users.getUser(userId);
+  const primary = user.emailAddresses.find(
+    (address) => address.id === user.primaryEmailAddressId,
+  );
+  if (!primary || primary.verification?.status !== "verified") {
+    return undefined;
+  }
+
+  emailByClerkUserId.set(userId, primary.emailAddress);
+  return primary.emailAddress;
+}
+
 /**
  * Clerk-based auth middleware, replacing Passport's per-route `ensureAuth`.
  * - Rejects unauthenticated requests with 401.
@@ -32,7 +55,16 @@ async function findAvailableUsername(email: string): Promise<string> {
  */
 export async function requireAuth(req: any, res: any, next: any) {
   const auth = getAuth(req);
-  const email = auth?.sessionClaims?.email as string | undefined;
+  let email = auth?.sessionClaims?.email as string | undefined;
+
+  if (!email && auth?.userId) {
+    try {
+      email = await emailForClerkUser(auth.userId);
+    } catch (error) {
+      console.error("requireAuth: could not load the user from Clerk:", error);
+      return res.status(500).json({ error: "Authentication error" });
+    }
+  }
 
   if (!email) {
     return res.status(401).json({ error: "Not authenticated" });
