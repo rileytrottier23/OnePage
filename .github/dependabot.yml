@@ -6,6 +6,11 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    ignore:
+      # drizzle-zod 0.8+ needs zod 4; this app is still on zod 3, so the
+      # upgrade breaks the build. Remove this when moving to zod 4.
+      - dependency-name: drizzle-zod
+        versions: [">=0.8.0"]
     groups:
       # Security fixes arrive as one grouped PR instead of many.
       security-updates:

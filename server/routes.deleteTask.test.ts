@@ -97,6 +97,6 @@ describe("DELETE /api/tasks/:id", () => {
     const res = await supertest(app).delete("/api/tasks/1");
 
     expect(res.status).toBe(500);
-    expect(res.body.message).toBe("db down");
+    expect(res.body.message).toBe("Something went wrong. Please try again");
   });
 });
