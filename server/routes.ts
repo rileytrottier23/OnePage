@@ -61,7 +61,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (err instanceof ZodError) {
       return res.status(400).json({ message: err.errors });
     }
-    return res.status(500).json({ message: err.message || "Internal server error" });
+    // Internal details (e.g. database errors) stay in the server log.
+    return res.status(500).json({ message: "Something went wrong. Please try again" });
+  };
+
+  // Daily cap on AI insight generations per user, so one account can't run up
+  // the AI bill. In memory: resets when the server restarts, which is fine
+  // for a cost guard.
+  const AI_INSIGHTS_DAILY_LIMIT = 10;
+  const aiInsightsUsage = new Map<number, { day: string; count: number }>();
+  const takeAiInsightsQuota = (userId: number): boolean => {
+    const day = new Date().toISOString().slice(0, 10);
+    const usage = aiInsightsUsage.get(userId);
+    if (!usage || usage.day !== day) {
+      aiInsightsUsage.set(userId, { day, count: 1 });
+      return true;
+    }
+    if (usage.count >= AI_INSIGHTS_DAILY_LIMIT) return false;
+    usage.count++;
+    return true;
   };
 
   app.get("/api/user", ensureAuth, (req: any, res: any) => {
@@ -156,9 +174,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If task is added to Today but has a categoryId,
       // we need to get the category name for reference
       let originalCategory = null;
-      if (taskData.inTodaySection && taskData.categoryId) {
+      if (taskData.categoryId) {
         const category = await storage.getCategory(taskData.categoryId, userId);
-        if (category) {
+        if (!category) {
+          return res.status(404).json({ message: "Category not found" });
+        }
+        if (taskData.inTodaySection) {
           originalCategory = category.name;
         }
       }
@@ -204,6 +225,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updates = taskSchema.parse(req.body);
+
+      // A task can only be nested under one of the user's own tasks.
+      if (updates.parentTaskId !== undefined) {
+        const parent = await storage.getTask(updates.parentTaskId, userId);
+        if (!parent || parent.id === id) {
+          return res.status(404).json({ message: "Parent task not found" });
+        }
+      }
       
       // Let the storage method handle the completedAt timestamp logic
       const updated = await storage.updateTask(id, updates, userId);
@@ -467,6 +496,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId
       });
+
+      if (data.targetCategoryId) {
+        const category = await storage.getCategory(data.targetCategoryId, userId);
+        if (!category) {
+          return res.status(404).json({ message: "Category not found" });
+        }
+      }
       
       const repeatingTask = await storage.createRepeatingTask(data);
       res.status(201).json(repeatingTask);
@@ -494,6 +530,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updates = repeatingTaskSchema.parse(req.body);
+      if (updates.targetCategoryId !== undefined) {
+        const category = await storage.getCategory(updates.targetCategoryId, userId);
+        if (!category) {
+          return res.status(404).json({ message: "Category not found" });
+        }
+      }
       const updated = await storage.updateRepeatingTask(id, updates, userId);
       
       if (!updated) {
@@ -585,6 +627,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         month: z.number().min(0).max(11),
         year: z.number().min(2000).max(2100)
       }).parse(req.body);
+
+      if (!takeAiInsightsQuota(userId)) {
+        return res.status(429).json({
+          message: `AI_RATE_LIMITED: You've reached today's limit of ${AI_INSIGHTS_DAILY_LIMIT} insight reports. Your saved insights are still available, and you can generate new ones tomorrow.`,
+        });
+      }
       
       // Get all tasks for the user
       const allTasks = await storage.getAllTasks(userId);
@@ -655,7 +703,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(429).json({ message: msg });
       }
       console.error("API Error:", err);
-      return res.status(500).json({ message: msg });
+      if (msg.startsWith("AI_ERROR:")) {
+        return res.status(500).json({ message: msg });
+      }
+      return res.status(500).json({ message: "Something went wrong. Please try again" });
     }
   });
 

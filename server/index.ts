@@ -11,6 +11,20 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
+// Baseline security headers. A full Content-Security-Policy is left out for
+// now because Clerk loads scripts, frames and images from its own hosts and a
+// policy needs testing against the sign-in flow first.
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Content-Security-Policy", "frame-ancestors 'none'; object-src 'none'; base-uri 'self'");
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000");
+  }
+  next();
+});
+
 // Clerk proxy must be mounted BEFORE body parsers (streams raw bytes)
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
@@ -58,9 +72,14 @@ app.use((req, res, next) => {
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
+      // Client errors (e.g. malformed JSON) keep their message; server errors
+      // get a generic one so internal details never reach the browser.
+      const message = status < 500 && err.message
+        ? err.message
+        : "Something went wrong. Please try again";
 
       console.error(`Error: ${err.stack || err.message || err}`);
+      if (res.headersSent) return;
       res.status(status).json({ error: message });
     });
 
