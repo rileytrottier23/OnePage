@@ -59,7 +59,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const handleError = (err: any, res: any) => {
     console.error("API Error:", err);
     if (err instanceof ZodError) {
-      return res.status(400).json({ message: err.errors });
+      return res.status(400).json({ message: err.issues });
     }
     // Internal details (e.g. database errors) stay in the server log.
     return res.status(500).json({ message: "Something went wrong. Please try again" });
@@ -690,7 +690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ insights, generatedAt: cached?.generatedAt ?? new Date() });
     } catch (err: any) {
       if (err instanceof ZodError) {
-        return res.status(400).json({ message: err.errors });
+        return res.status(400).json({ message: err.issues });
       }
       const msg: string = err?.message ?? "Internal server error";
       if (msg.startsWith("AI_KEY_MISSING:") || msg.startsWith("AI_SERVICE_DOWN:")) {
