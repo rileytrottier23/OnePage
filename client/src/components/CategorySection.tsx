@@ -171,8 +171,8 @@ export default function CategorySection({ category, tasks }: CategorySectionProp
     });
 
     // Helper function to render a task and its children
-    const renderTaskHierarchy = (task: Task): JSX.Element[] => {
-      const result: JSX.Element[] = [
+    const renderTaskHierarchy = (task: Task): React.JSX.Element[] => {
+      const result: React.JSX.Element[] = [
         <TaskItem 
           key={task.id} 
           task={task} 

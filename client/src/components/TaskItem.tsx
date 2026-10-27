@@ -40,7 +40,7 @@ interface TaskItemProps {
   inTodaySection?: boolean;
   categoryName?: string;
   onCreateSubtask?: (taskId: number) => void;
-  focusRef?: React.RefObject<HTMLDivElement>;
+  focusRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export default function TaskItem({ 
