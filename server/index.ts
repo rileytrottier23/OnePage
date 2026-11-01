@@ -103,6 +103,14 @@ app.use((req, res, next) => {
     }, () => {
       log(`serving on port ${port}`);
     });
+
+    // Railway sends SIGTERM on redeploy and sleep. Exiting cleanly (code 0)
+    // instead of dying on the signal stops npm from logging
+    // "npm error signal SIGTERM" on every restart.
+    process.once("SIGTERM", () => {
+      server.close(() => process.exit(0));
+      setTimeout(() => process.exit(0), 5000).unref();
+    });
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
