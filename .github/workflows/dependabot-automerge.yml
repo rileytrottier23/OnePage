@@ -1,0 +1,39 @@
+name: Dependabot auto-merge
+
+# Merges Dependabot's grouped minor-and-patch PRs once CI has passed on that
+# exact commit. Major-version and security-group PRs are left for review.
+# Runs from the default branch and never checks out PR code.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]' &&
+      contains(github.event.workflow_run.head_branch, '/minor-and-patch-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge if the PR is still on the tested commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          pr=$(gh api "repos/$REPO/pulls?head=${REPO%%/*}:$BRANCH&state=open" --jq '.[0]')
+          if [ -z "$pr" ] || [ "$pr" = "null" ]; then echo "No open PR for $BRANCH"; exit 0; fi
+          number=$(jq -r .number <<<"$pr")
+          author=$(jq -r .user.login <<<"$pr")
+          sha=$(jq -r .head.sha <<<"$pr")
+          if [ "$author" != "dependabot[bot]" ]; then echo "PR #$number not from Dependabot"; exit 0; fi
+          if [ "$sha" != "$TESTED_SHA" ]; then echo "PR #$number has new commits since CI ran"; exit 0; fi
+          gh pr merge "$number" --repo "$REPO" --squash --match-head-commit "$sha"
