@@ -18,6 +18,13 @@ jobs:
 
       - run: npm ci
 
+      # Fails the build on any critical vulnerability in a production
+      # dependency. High and lower are listed in the log without failing.
+      - name: Dependency audit
+        run: |
+          npm audit --omit=dev || true
+          npm audit --omit=dev --audit-level=critical
+
       - name: Typecheck
         run: npm run check
 
