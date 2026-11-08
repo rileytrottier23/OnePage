@@ -9,6 +9,13 @@ Read `SPEC.md` first. It says what this app is, what must stay true, and what we
 - Explain changes in plain language. Riley is a PM, not a full-time engineer.
 - Show a task list for multi-step work.
 
+## Working habits
+- **Docs vs code:** when a doc (this file, `SPEC.md`, README) and the code disagree, follow the code, and list every mismatch you found in your final reply so the doc can be fixed.
+- **Prove it works:** run the checks before saying something works, and paste the output. At the end of a task, say what you didn't test.
+- **Never weaken tests:** don't weaken or delete an existing assertion or test to make a change pass. Fix the code, or stop and ask.
+- **Read, then edit:** run the tests once before changing anything, so you know what was already failing. Then list the files you need, read them in one pass, make all the edits, and run the checks again.
+- **No stray files:** don't create new markdown files without asking. Each fact lives in one file; update that file instead of starting another.
+
 ## Commands
 | Task | Command |
 |---|---|
