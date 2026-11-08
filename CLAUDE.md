@@ -15,6 +15,8 @@ Read `SPEC.md` first. It says what this app is, what must stay true, and what we
 - **Never weaken tests:** don't weaken or delete an existing assertion or test to make a change pass. Fix the code, or stop and ask.
 - **Read, then edit:** run the tests once before changing anything, so you know what was already failing. Then list the files you need, read them in one pass, make all the edits, and run the checks again.
 - **No stray files:** don't create new markdown files without asking. Each fact lives in one file; update that file instead of starting another.
+- **Say your assumptions:** before coding, state what you are assuming. If the request could mean two things, name both and ask instead of picking one quietly.
+- **Surgical changes:** touch only the lines the task needs. Don't reformat or refactor nearby code. Mention unrelated dead code instead of deleting it, but remove anything your own change left unused.
 
 ## Commands
 | Task | Command |
