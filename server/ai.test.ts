@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { generateInsights } from "./ai.js";
+import {
+  generateInsights,
+  MAX_TASK_TEXT_IN_PROMPT,
+  MAX_COMPLETED_TASKS_IN_PROMPT,
+  MAX_PENDING_TASKS_IN_PROMPT,
+} from "./ai.js";
 
 const { mockCreate } = vi.hoisted(() => ({ mockCreate: vi.fn() }));
 
@@ -102,5 +107,48 @@ describe("generateInsights", () => {
     await expect(generateInsights([], [], 0, 2025)).rejects.toThrow(
       "AI_ERROR:"
     );
+  });
+
+  describe("prompt size limits", () => {
+    function sentTaskData() {
+      const content: string = mockCreate.mock.calls[0][0].messages[0].content;
+      return JSON.parse(content.slice(content.indexOf("{")));
+    }
+
+    beforeEach(() => {
+      mockCreate.mockResolvedValue({ content: [{ type: "text", text: "<p>ok</p>" }] });
+    });
+
+    it("clips very long task text", async () => {
+      const longText = "x".repeat(MAX_TASK_TEXT_IN_PROMPT + 200);
+      await generateInsights([], [{ text: longText, createdAt: "2025-04-01" }], 3, 2025);
+
+      const sent = sentTaskData().pendingTasks[0].text;
+      expect(sent.length).toBe(MAX_TASK_TEXT_IN_PROMPT + 1); // plus the ellipsis
+      expect(sent.endsWith("…")).toBe(true);
+    });
+
+    it("keeps only the newest completed and pending tasks, and reports real totals", async () => {
+      const day = (i: number) => new Date(Date.UTC(2025, 3, 1, 0, i)).toISOString();
+      const completed = Array.from({ length: MAX_COMPLETED_TASKS_IN_PROMPT + 50 }, (_, i) => ({
+        text: `done ${i}`,
+        completedAt: day(i),
+        createdAt: day(i),
+      }));
+      const pending = Array.from({ length: MAX_PENDING_TASKS_IN_PROMPT + 50 }, (_, i) => ({
+        text: `todo ${i}`,
+        createdAt: day(i),
+      }));
+
+      await generateInsights(completed, pending, 3, 2025);
+      const data = sentTaskData();
+
+      expect(data.completedTasks).toHaveLength(MAX_COMPLETED_TASKS_IN_PROMPT);
+      expect(data.pendingTasks).toHaveLength(MAX_PENDING_TASKS_IN_PROMPT);
+      expect(data.completedTasks[0].text).toBe(`done ${completed.length - 1}`);
+      expect(data.pendingTasks[0].text).toBe(`todo ${pending.length - 1}`);
+      expect(data.completedTaskCount).toBe(completed.length);
+      expect(data.pendingTaskCount).toBe(pending.length);
+    });
   });
 });
