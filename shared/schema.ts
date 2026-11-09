@@ -33,7 +33,13 @@ export const tasks = pgTable("tasks", {
   userId: integer("user_id").references(() => users.id),
 });
 
-export const insertTaskSchema = createInsertSchema(tasks).pick({
+// Longest task text accepted. Every task goes into the AI insights prompt, so
+// this also bounds what one report can cost.
+export const MAX_TASK_TEXT_LENGTH = 1000;
+
+export const insertTaskSchema = createInsertSchema(tasks, {
+  text: (schema) => schema.max(MAX_TASK_TEXT_LENGTH),
+}).pick({
   text: true,
   categoryId: true,
   inTodaySection: true,
@@ -88,7 +94,9 @@ export const repeatingTasks = pgTable("repeating_tasks", {
   userId: integer("user_id").references(() => users.id),
 });
 
-export const insertRepeatingTaskSchema = createInsertSchema(repeatingTasks).pick({
+export const insertRepeatingTaskSchema = createInsertSchema(repeatingTasks, {
+  taskText: (schema) => schema.max(MAX_TASK_TEXT_LENGTH),
+}).pick({
   taskText: true,
   repeatType: true,
   targetCategoryId: true,

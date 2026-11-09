@@ -21,6 +21,34 @@ const CLERK_FAPI = 'https://frontend-api.clerk.dev';
 export const CLERK_PROXY_PATH = '/api/__clerk';
 
 /**
+ * The visitor's IP address to pass on to Clerk, which uses it for per-IP
+ * sign-in and sign-up protection.
+ *
+ * The first X-Forwarded-For entry is whatever the visitor sent, so trusting it
+ * let anyone pick a fake IP and get around those limits. Railway's edge sets
+ * X-Real-IP to the address that actually connected, so use that. If it is
+ * missing, use the last X-Forwarded-For entry (the one added by the nearest
+ * proxy), then the socket address.
+ */
+export function getClientIp(
+  headers: IncomingHttpHeaders,
+  remoteAddress?: string,
+): string {
+  const realIp = headers['x-real-ip'];
+  const fromRealIp = (Array.isArray(realIp) ? realIp[0] : realIp)?.trim();
+  if (fromRealIp) return fromRealIp;
+
+  const xff = headers['x-forwarded-for'];
+  const hops = (Array.isArray(xff) ? xff.join(',') : xff ?? '')
+    .split(',')
+    .map((hop) => hop.trim())
+    .filter(Boolean);
+  if (hops.length > 0) return hops[hops.length - 1];
+
+  return remoteAddress ?? '';
+}
+
+/**
  * Returns the first effective public hostname for the given request,
  * preferring x-forwarded-host over the Host header so callers behind a
  * proxy see the original client-facing host.
@@ -74,11 +102,7 @@ export function clerkProxyMiddleware(): RequestHandler {
         proxyReq.setHeader('Clerk-Proxy-Url', proxyUrl);
         proxyReq.setHeader('Clerk-Secret-Key', secretKey);
 
-        const xff = req.headers['x-forwarded-for'];
-        const clientIp =
-          (Array.isArray(xff) ? xff[0] : xff)?.split(',')[0]?.trim() ||
-          req.socket?.remoteAddress ||
-          '';
+        const clientIp = getClientIp(req.headers, req.socket?.remoteAddress);
         if (clientIp) {
           proxyReq.setHeader('X-Forwarded-For', clientIp);
         }
