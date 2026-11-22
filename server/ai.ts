@@ -17,6 +17,28 @@ Use <strong> tags for emphasis. Include the following sections:
 3. Recommendations for Improvement
 Offer actionable advice and positive encouragement. Keep your response friendly and motivational.`;
 
+// Limits on what goes into one insights prompt. Task text is already capped
+// at MAX_TASK_TEXT_LENGTH on save; these also cover older rows and very busy
+// months. Beyond the limits, the newest tasks are kept.
+export const MAX_TASK_TEXT_IN_PROMPT = 500;
+export const MAX_COMPLETED_TASKS_IN_PROMPT = 300;
+export const MAX_PENDING_TASKS_IN_PROMPT = 200;
+
+function clipText(text: unknown): string {
+  const value = typeof text === "string" ? text : "";
+  return value.length > MAX_TASK_TEXT_IN_PROMPT
+    ? value.slice(0, MAX_TASK_TEXT_IN_PROMPT) + "…"
+    : value;
+}
+
+function newestFirst<T extends Record<string, any>>(items: T[], dateField: string): T[] {
+  const time = (item: T) => {
+    const t = item[dateField] ? new Date(item[dateField]).getTime() : 0;
+    return Number.isNaN(t) ? 0 : t;
+  };
+  return [...items].sort((a, b) => time(b) - time(a));
+}
+
 /**
  * Generate productivity insights based on task data
  */
@@ -37,19 +59,23 @@ export async function generateInsights(
   ];
   const monthName = monthNames[month];
 
-  // Prepare the task summary for the AI
+  // Prepare the task summary for the AI. Text and task counts are capped so
+  // one report can't grow to the model's full context window (cost).
   const taskSummary = {
-    completedTasks: completedTasks.map(task => ({
-      text: task.text,
+    completedTasks: newestFirst(completedTasks, "completedAt").slice(0, MAX_COMPLETED_TASKS_IN_PROMPT).map(task => ({
+      text: clipText(task.text),
       categoryName: task.categoryName || "Uncategorized",
       completedAt: task.completedAt,
       createdAt: task.createdAt
     })),
-    pendingTasks: pendingTasks.map(task => ({
-      text: task.text,
+    pendingTasks: newestFirst(pendingTasks, "createdAt").slice(0, MAX_PENDING_TASKS_IN_PROMPT).map(task => ({
+      text: clipText(task.text),
       categoryName: task.categoryName || "Uncategorized",
       createdAt: task.createdAt
     })),
+    // Real totals, in case the lists above were cut to the newest tasks.
+    completedTaskCount: completedTasks.length,
+    pendingTaskCount: pendingTasks.length,
     timeframe: {
       month: monthName,
       year: year
