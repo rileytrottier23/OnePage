@@ -18,6 +18,11 @@ Read `SPEC.md` first. It says what this app is, what must stay true, and what we
 - **Say your assumptions:** before coding, state what you are assuming. If the request could mean two things, name both and ask instead of picking one quietly.
 - **Surgical changes:** touch only the lines the task needs. Don't reformat or refactor nearby code. Mention unrelated dead code instead of deleting it, but remove anything your own change left unused.
 
+## Session handover
+- At the start of a session, read `PROGRESS.md` to see where the last session stopped.
+- At the end of a session that changed something, add one dated entry at the top of `PROGRESS.md`: what changed (with PR links), what's next, and anything left broken or untested. Keep the newest 10 entries and delete older ones; git history keeps the rest.
+- This repo is public: no secrets, user data or personal details in `PROGRESS.md`.
+
 ## Commands
 | Task | Command |
 |---|---|
